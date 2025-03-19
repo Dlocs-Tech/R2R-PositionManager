@@ -6,10 +6,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {FullMath} from "@aperture_finance/uni-v3-lib/src/FullMath.sol";
+import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
+import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
+import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
 
 import {IPositionManagerDistributor} from "./interfaces/IPositionManagerDistributor.sol";
-import {IFundsDistributor} from "./interfaces/IFundsDistributor.sol";
-import {IV3SwapRouter} from "./interfaces/IV3SwapRouter.sol";
 import {PositionManager} from "./PositionManager.sol";
 
 /**
@@ -17,21 +18,24 @@ import {PositionManager} from "./PositionManager.sol";
  * @notice Distributes the rewards of the PositionManager contract
  * @dev The rewards are distributed to the users and the FundsDistributor
  */
-contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
+contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3SwapCallback, Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    /// @dev Maximum percentage value with 4 decimals
+    /// @notice Maximum percentage value with 4 decimals
     uint256 public constant MAX_PERCENTAGE = 1_000_000;
-
-    /// @dev Fee used in swaps from USDT to wnative
-    uint24 public constant FEE = 100;
 
     /// @dev Error thrown when the caller is not the PositionManager contract
     error WrongCaller();
 
     /// @dev Error thrown when the input is invalid
     error InvalidEntry();
+
+    /// @dev Error thrown when the caller is not the pool
+    error NotPool();
+
+    /// @dev Error thrown when the balance is not enough
+    error NotEnoughBalance();
 
     /**
      * @notice Event emitted when the rewards are distributed
@@ -63,6 +67,9 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
         uint256 fundsDistributorPercentage;
     }
 
+    /// @notice Pool of USDT/WNative
+    IPancakeV3Pool public immutable pool;
+
     /// @notice PositionManager contract
     PositionManager public immutable sharesContract;
 
@@ -72,32 +79,27 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
     /// @notice WNative address
     IERC20 public immutable wnative;
 
-    /// @notice SwapRouter address
-    IV3SwapRouter public immutable swapRouter;
-
     /// @notice Total amount of USDT in the contract owned by the users
     uint256 public usersTotalBalances;
 
-    /// @notice Set of users that have deposited USDT
+    /// @dev Set of users that have deposited USDT
     EnumerableSet.AddressSet private _usersSet;
 
-    /// @notice Mapping of the balances of the users
+    /// @dev Mapping of the balances of the users
     mapping(address => uint256) private _balances;
 
     /**
      * @notice Constructor
      * @param params Parameters to create the PositionManager contract
+     * @param _pool Address of the PancakeSwap V3 pool of USDT/WNative
      */
-    constructor(CreatePositionManagerParams memory params) {
-        address _swapRouter = IFundsDistributor(params.fundsDistributor).swapRouter();
-        address _wnative = IFundsDistributor(params.fundsDistributor).wnative();
-        address _usdt = IFundsDistributor(params.fundsDistributor).usdt();
+    constructor(CreatePositionManagerParams memory params, address _pool) {
+        if (_pool == address(0)) revert InvalidEntry();
 
-        if (_usdt == address(0) || _wnative == address(0) || _swapRouter == address(0)) revert InvalidEntry();
+        pool = IPancakeV3Pool(_pool);
 
-        usdt = IERC20(_usdt);
-        wnative = IERC20(_wnative);
-        swapRouter = IV3SwapRouter(_swapRouter);
+        usdt = IERC20(pool.token0());
+        wnative = IERC20(pool.token1());
 
         sharesContract = new PositionManager(
             params.swapRouter,
@@ -105,7 +107,7 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
             params.usdtToToken1Path,
             params.token0ToUsdtPath,
             params.token1ToUsdtPath,
-            _usdt,
+            address(usdt),
             params.dataFeed,
             params.pool,
             params.fundsDistributor,
@@ -126,9 +128,7 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
         return sharesContract.deposit(depositAmount, msg.sender);
     }
 
-    /**
-     * @notice Withdraw Funds from the positionManager
-     */
+    /// @notice Withdraw Funds from the positionManager
     function withdraw() external {
         sharesContract.withdraw(msg.sender);
 
@@ -154,21 +154,7 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
         uint256 totalShares = sharesContract.totalSupply();
 
         if (totalShares == 0) {
-            _approveToken(usdt, address(swapRouter), amountToDistribute);
-
-            uint256 wbnbTotalBalance = swapRouter.exactInputSingle(
-                IV3SwapRouter.ExactInputSingleParams({
-                    tokenIn: address(usdt),
-                    tokenOut: address(wnative),
-                    fee: FEE,
-                    recipient: address(this),
-                    amountIn: amountToDistribute,
-                    amountOutMinimum: amountOutMin,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-
-            wnative.safeTransfer(fundsDistributor, wbnbTotalBalance);
+            _swapUsdtAndTransfer(amountToDistribute, amountOutMin, fundsDistributor);
 
             emit RewardsDistributed(amountToDistribute);
             return;
@@ -177,21 +163,7 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
         // Send fundsDistributorPercentage of the tokens to fundsDistributor
         uint256 fundsDistributorAmount = FullMath.mulDiv(amountToDistribute, fundsDistributorPercentage, MAX_PERCENTAGE);
 
-        _approveToken(usdt, address(swapRouter), fundsDistributorAmount);
-
-        uint256 wbnbBalance = swapRouter.exactInputSingle(
-            IV3SwapRouter.ExactInputSingleParams({
-                tokenIn: address(usdt),
-                tokenOut: address(wnative),
-                fee: FEE,
-                recipient: address(this),
-                amountIn: fundsDistributorAmount,
-                amountOutMinimum: amountOutMin,
-                sqrtPriceLimitX96: 0
-            })
-        );
-
-        wnative.safeTransfer(fundsDistributor, wbnbBalance);
+        _swapUsdtAndTransfer(fundsDistributorAmount, amountOutMin, fundsDistributor);
 
         amountToDistribute -= fundsDistributorAmount;
 
@@ -226,7 +198,7 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
 
         usersTotalBalances -= rewards;
 
-        sharesContract.usdt().safeTransfer(msg.sender, rewards);
+        usdt.safeTransfer(msg.sender, rewards);
     }
 
     /**
@@ -245,9 +217,28 @@ contract PositionManagerDistributor is IPositionManagerDistributor, Ownable {
         return _usersSet.values();
     }
 
-    function _approveToken(IERC20 token, address spender, uint256 amount) internal {
-        if (token.allowance(address(this), spender) > 0) token.safeApprove(spender, 0);
+    function _swapUsdtAndTransfer(uint256 amountIn, uint256 amountOutMin, address recipient) internal {
+        IPancakeV3Pool(pool).swap(
+            address(this),
+            true, // token0 to token1
+            int256(amountIn),
+            uint160(TickMath.MIN_SQRT_RATIO) + 1,
+            ""
+        );
 
-        token.safeApprove(spender, amount);
+        uint256 wbnbBalance = wnative.balanceOf(address(this));
+
+        if (wbnbBalance < amountOutMin) revert NotEnoughBalance();
+
+        wnative.safeTransfer(recipient, wbnbBalance);
+    }
+
+    function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
+        if (msg.sender != address(pool)) revert NotPool();
+
+        if (amount0Delta > 0)
+            usdt.safeTransfer(msg.sender, uint256(amount0Delta));
+        else if (amount1Delta > 0)
+            wnative.safeTransfer(msg.sender, uint256(amount1Delta));
     }
 }
