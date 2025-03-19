@@ -8,28 +8,30 @@ import {BigNumber} from "ethers";
 export default async function suite(): Promise<void> {
     const maxPercentage: BigNumber = BigNumber.from(1000000);
 
+    let snap: string;
+    let PositionManagerDistributor: PositionManagerDistributor;
+    let PositionManager: any;
+
+    let deployer: SignerWithAddress;
+    let manager: SignerWithAddress;
+    let user1: SignerWithAddress;
+    let user2: SignerWithAddress;
+    let user3: SignerWithAddress;
+    let user4: SignerWithAddress;
+    let FundsDistributor: SignerWithAddress;
+
+    let USDTAddress = contractAddresses.USDT;
+    let WBNBAddress = contractAddresses.WBNB;
+
+    let USDTContract: IERC20;
+    let WBNBContract: IERC20;
+
+    const wbnbToUsdt: BigNumber = ethers.utils.parseEther("616.3841228031"); // 1 WBNB = 616.3841228031 USDT
+
     describe("PositionManager USDT/USDC", function () {
-        let snap: string;
-        let PositionManagerDistributor: PositionManagerDistributor;
-        let PositionManager: any;
-
-        let deployer: SignerWithAddress;
-        let manager: SignerWithAddress;
-        let user1: SignerWithAddress;
-        let user2: SignerWithAddress;
-        let user3: SignerWithAddress;
-        let user4: SignerWithAddress;
-        let FundsDistributor: SignerWithAddress;
-
-        let USDTAddress = contractAddresses.USDT;
         let USDCAddress = contractAddresses.USDC;
-        let WBNBAddress = contractAddresses.WBNB;
 
-        let USDTContract: IERC20;
         let USDCContract: IERC20;
-        let WBNBContract: IERC20;
-
-        const wbnbToUsdt: BigNumber = ethers.utils.parseEther("615.40830210"); // 1 WBNB = 615.40830210 USDT
 
         const usdcToUsdt: BigNumber = ethers.utils.parseEther("1"); // 1 USDC = 1 USDT
 
@@ -594,7 +596,7 @@ export default async function suite(): Promise<void> {
 
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul("1000000000000000000").div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -618,7 +620,7 @@ export default async function suite(): Promise<void> {
             const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -661,7 +663,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -712,7 +714,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
@@ -739,26 +741,6 @@ export default async function suite(): Promise<void> {
     });
 
     describe("PositionManager USDT/WBNB", function () {
-        let snap: string;
-        let PositionManagerDistributor: PositionManagerDistributor;
-        let PositionManager: any;
-
-        let deployer: SignerWithAddress;
-        let manager: SignerWithAddress;
-        let user1: SignerWithAddress;
-        let user2: SignerWithAddress;
-        let user3: SignerWithAddress;
-        let user4: SignerWithAddress;
-        let FundsDistributor: SignerWithAddress;
-
-        let USDTAddress = contractAddresses.USDT;
-        let WBNBAddress = contractAddresses.WBNB;
-
-        let USDTContract: IERC20;
-        let WBNBContract: IERC20;
-
-        const wbnbToUsdt: BigNumber = ethers.utils.parseEther("615.40830210"); // 1 WBNB = 615.40830210 USDT
-
         const bnbChainLinkPrice: BigNumber = BigNumber.from(61540830210); // 61540830210 USDT
 
         const minTick: BigNumber = BigNumber.from(-887272);
@@ -1322,7 +1304,7 @@ export default async function suite(): Promise<void> {
 
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul("1000000000000000000").div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -1346,7 +1328,7 @@ export default async function suite(): Promise<void> {
             const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -1389,7 +1371,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -1440,7 +1422,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
@@ -1467,27 +1449,10 @@ export default async function suite(): Promise<void> {
     });
 
     describe("PositionManager ETH/USDT", function () {
-        let snap: string;
-        let FundsDistributor: any;
-        let PositionManagerDistributor: PositionManagerDistributor;
-        let PositionManager: any;
-
-        let deployer: SignerWithAddress;
-        let manager: SignerWithAddress;
-        let user1: SignerWithAddress;
-        let user2: SignerWithAddress;
-        let user3: SignerWithAddress;
-        let user4: SignerWithAddress;
-
-        let USDTAddress = contractAddresses.USDT;
         let ETHAddress = contractAddresses.ETH;
-        let WBNBAddress = contractAddresses.WBNB;
 
-        let USDTContract: IERC20;
         let ETHContract: IERC20;
-        let WBNBContract: IERC20;
 
-        const wbnbToUsdt: BigNumber = ethers.utils.parseEther("615.40830210"); // 1 WBNB = 615.40830210 USDT
         const ethToUsdt: BigNumber = ethers.utils.parseEther("3359"); // 1 ETH = 3359 USDT
 
         const usdChainLinkPrice: BigNumber = BigNumber.from(99962487);
@@ -2054,7 +2019,7 @@ export default async function suite(): Promise<void> {
 
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul("1000000000000000000").div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -2078,7 +2043,7 @@ export default async function suite(): Promise<void> {
             const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -2121,7 +2086,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -2172,7 +2137,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
@@ -2199,28 +2164,11 @@ export default async function suite(): Promise<void> {
     });
 
     describe("PositionManager ETH/WBNB", function () {
-        let snap: string;
-        let FundsDistributor: any;
-        let PositionManagerDistributor: PositionManagerDistributor;
-        let PositionManager: any;
-
-        let deployer: SignerWithAddress;
-        let manager: SignerWithAddress;
-        let user1: SignerWithAddress;
-        let user2: SignerWithAddress;
-        let user3: SignerWithAddress;
-        let user4: SignerWithAddress;
-
-        let USDTAddress = contractAddresses.USDT;
-        let WBNBAddress = contractAddresses.WBNB;
         let ETHAddress = contractAddresses.ETH;
 
-        let USDTContract: IERC20;
-        let WBNBContract: IERC20;
         let ETHContract: IERC20;
 
         const ethToUsdt: BigNumber = ethers.utils.parseEther("3359"); // 1 ETH = 3359 USDT
-        const wbnbToUsdt: BigNumber = ethers.utils.parseEther("615.40830210"); // 1 WBNB = 615.40830210 USDT
 
         const bnbChainLinkPrice: BigNumber = BigNumber.from(61540830210); // 61540830210 USDT
 
@@ -2795,7 +2743,7 @@ export default async function suite(): Promise<void> {
 
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul("1000000000000000000").div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -2819,7 +2767,7 @@ export default async function suite(): Promise<void> {
             const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -2862,7 +2810,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -2913,7 +2861,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
@@ -2940,28 +2888,11 @@ export default async function suite(): Promise<void> {
     });
 
     describe("PositionManager USDT/BTCB", function () {
-        let snap: string;
-        let FundsDistributor: any;
-        let PositionManagerDistributor: PositionManagerDistributor;
-        let PositionManager: any;
-
-        let deployer: SignerWithAddress;
-        let manager: SignerWithAddress;
-        let user1: SignerWithAddress;
-        let user2: SignerWithAddress;
-        let user3: SignerWithAddress;
-        let user4: SignerWithAddress;
-
-        let USDTAddress = contractAddresses.USDT;
         let BTCBAddress = contractAddresses.BTCB;
-        let WBNBAddress = contractAddresses.WBNB;
 
-        let USDTContract: IERC20;
         let BTCBContract: IERC20;
-        let WBNBContract: IERC20;
 
         const btcbToUsdt: BigNumber = ethers.utils.parseEther("92800.0418671");
-        const wbnbToUsdt: BigNumber = ethers.utils.parseEther("615.40830210"); // 1 WBNB = 615.40830210 USDT
 
         const btcbChainLinkPrice: BigNumber = ethers.utils.parseEther("0.000009266215747491");
 
@@ -3527,7 +3458,7 @@ export default async function suite(): Promise<void> {
 
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul("1000000000000000000").div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -3551,7 +3482,7 @@ export default async function suite(): Promise<void> {
             const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -3594,7 +3525,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -3645,7 +3576,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
@@ -3672,28 +3603,11 @@ export default async function suite(): Promise<void> {
     });
 
     describe("PositionManager XRP/WBNB", function () {
-        let snap: string;
-        let FundsDistributor: any;
-        let PositionManagerDistributor: PositionManagerDistributor;
-        let PositionManager: any;
-
-        let deployer: SignerWithAddress;
-        let manager: SignerWithAddress;
-        let user1: SignerWithAddress;
-        let user2: SignerWithAddress;
-        let user3: SignerWithAddress;
-        let user4: SignerWithAddress;
-
-        let USDTAddress = contractAddresses.USDT;
-        let WBNBAddress = contractAddresses.WBNB;
         let XRPAddress = contractAddresses.XRP;
 
-        let USDTContract: IERC20;
-        let WBNBContract: IERC20;
         let XRPContract: IERC20;
 
         const xrpToUsdt: BigNumber = ethers.utils.parseEther("1.387445"); // 1 XRP = 1.387445 USDT
-        const wbnbToUsdt: BigNumber = ethers.utils.parseEther("615.40830210"); // 1 WBNB = 615.40830210 USDT
 
         const bnbChainLinkPrice: BigNumber = BigNumber.from(61540830210); // 61540830210 USDT
 
@@ -4266,7 +4180,7 @@ export default async function suite(): Promise<void> {
 
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul("1000000000000000000").div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -4290,7 +4204,7 @@ export default async function suite(): Promise<void> {
             const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -4333,7 +4247,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -4384,7 +4298,7 @@ export default async function suite(): Promise<void> {
             const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
 
             expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul("1000000000000000000").div(wbnbToUsdt),
+                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
