@@ -24,7 +24,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         log: true,
         waitConfirmations: 1,
         args: [
-          InitValues
+          InitValues, contractAddresses["Pool_USDT_WBNB"]
         ],
     });
 
@@ -46,7 +46,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         await hre.run('verify:verify', {
           address: result.address,
           contract: 'contracts/PositionManagerDistributor.sol:PositionManagerDistributor',
-          constructorArguments: [InitValues],
+          constructorArguments: [InitValues, contractAddresses["Pool_USDT_WBNB"]],
         });
     } catch (error) {}
 
@@ -77,7 +77,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.ETH_USDT
+            initValues_PositionManagerDistributor.ETH_USDT, contractAddresses["Pool_USDT_WBNB"]
         ],
       });
 
@@ -99,7 +99,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.ETH_WBNB
+            initValues_PositionManagerDistributor.ETH_WBNB, contractAddresses["Pool_USDT_WBNB"]
         ],
       });
 
@@ -121,7 +121,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.USDT_BTCB
+            initValues_PositionManagerDistributor.USDT_BTCB, contractAddresses["Pool_USDT_WBNB"]
         ],
       });
 
@@ -143,7 +143,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.XRP_WBNB
+            initValues_PositionManagerDistributor.XRP_WBNB, contractAddresses["Pool_USDT_WBNB"]
         ],
       });
 
@@ -165,7 +165,7 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.USDT_USDC
+            initValues_PositionManagerDistributor.USDT_USDC, contractAddresses["Pool_USDT_WBNB"]
         ],
       });
 
