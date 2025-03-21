@@ -2,8 +2,6 @@
 pragma solidity ^0.8.22;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
-import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -11,6 +9,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
 import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
 import {FullMath} from "@aperture_finance/uni-v3-lib/src/FullMath.sol";
+import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
+import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
 
 import {IPositionManagerDistributor} from "./interfaces/IPositionManagerDistributor.sol";
 import {FeeManagement} from "./FeeManagement.sol";
@@ -210,22 +210,22 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
                 _pool1Direction
             );
 
-            uint256 usdtAmount = usdt.balanceOf(address(this));
-
-            _swapUsingPool(
-                _pool1,
-                usdtAmount,
-                _getAmountMin(usdtAmount, token1Price, false),
-                !_pool1Direction, // USDT to token1
-                _pool1Direction
-            );
-
-            uint256 totalLiq = _token1.balanceOf(address(this));
-
             _harvest();
 
             // Burn liquidity from the position
             _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
+
+            uint256 amount0 = _token0.balanceOf(address(this));
+
+            _swapUsingPool(
+                _pool,
+                amount0,
+                _getAmountMin(amount0, token1Price, false),
+                true, // token0 to token1
+                false
+            );
+
+            uint256 totalLiq = _token1.balanceOf(address(this));
 
             // Calculate the price of token1 over token0
             (, int24 tick) = _priceAndTick();
@@ -235,11 +235,9 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
 
             // Calculate contract balance in token1
-            (uint256 pool0, uint256 pool1) = getTotalAmounts();
+            (, uint256 pool1) = getTotalAmounts();
 
-            pool1 -= userLiq;
-
-            uint256 token1ContractAmount = FullMath.mulDiv(pool0, price, PRECISION) + pool1;
+            uint256 token1ContractAmount = pool1 - userLiq;
 
             // Calculate shares to mint (totalSupply cannot be 0 if the contract is in position)
             shares = FullMath.mulDiv(userLiq, totalSupply(), token1ContractAmount);
@@ -604,10 +602,10 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         (uint256 bal0, uint256 bal1) = getTotalAmounts();
 
         // Then we fetch how much liquidity we get for adding at the main position ticks with our token balances
-        (uint160 price, ) = _priceAndTick();
+        (uint160 sqrtPrice, ) = _priceAndTick();
 
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            price,
+            sqrtPrice,
             TickMath.getSqrtRatioAtTick(_tickLower),
             TickMath.getSqrtRatioAtTick(_tickUpper),
             bal0,

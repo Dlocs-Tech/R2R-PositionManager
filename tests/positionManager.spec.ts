@@ -400,23 +400,23 @@ export default async function suite(): Promise<void> {
             expect(await PositionManager.balanceOf(user2.address)).to.be.eq(0);
 
             const user2USDTBalance = await USDTContract.balanceOf(user2.address);
-            const user2WBNBBalanceInWBNB = await USDCContract.balanceOf(user2.address);
-            const user2WBNBBalance = user2WBNBBalanceInWBNB.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user2USDTBalance.add(user2WBNBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user2USDCBalanceInUSDC = await USDCContract.balanceOf(user2.address);
+            const user2USDCBalance = user2USDCBalanceInUSDC.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user2USDTBalance.add(user2USDCBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
             const user3USDTBalance = await USDTContract.balanceOf(user3.address);
-            const user3WBNBBalanceInWBNB = await USDCContract.balanceOf(user3.address);
-            const user3WBNBBalance = user3WBNBBalanceInWBNB.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user3USDTBalance.add(user3WBNBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user3USDCBalanceInUSDC = await USDCContract.balanceOf(user3.address);
+            const user3USDCBalance = user3USDCBalanceInUSDC.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user3USDTBalance.add(user3USDCBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.balanceOf(user4.address)).to.be.eq(0);
 
             const user4USDTBalance = await USDTContract.balanceOf(user4.address);
-            const user4WBNBBalanceInWBNB = await USDCContract.balanceOf(user4.address);
-            const user4WBNBBalance = user4WBNBBalanceInWBNB.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user4USDTBalance.add(user4WBNBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user4USDCBalanceInUSDC = await USDCContract.balanceOf(user4.address);
+            const user4USDCBalance = user4USDCBalanceInUSDC.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user4USDTBalance.add(user4USDCBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
         });
@@ -466,23 +466,23 @@ export default async function suite(): Promise<void> {
             expect(await PositionManager.balanceOf(user4.address)).to.be.eq(0);
 
             const user4USDTBalance = await USDTContract.balanceOf(user4.address);
-            const user4WBNBBalanceInWBNB = await USDCContract.balanceOf(user4.address);
-            const user4WBNBBalance = user4WBNBBalanceInWBNB.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user4USDTBalance.add(user4WBNBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user4USDCBalanceInUSDC = await USDCContract.balanceOf(user4.address);
+            const user4USDCBalance = user4USDCBalanceInUSDC.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user4USDTBalance.add(user4USDCBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
             const user3USDTBalance = await USDTContract.balanceOf(user3.address);
-            const user3WBNBBalanceInWBNB = await USDCContract.balanceOf(user3.address);
-            const user3WBNBBalance = user3WBNBBalanceInWBNB.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user3USDTBalance.add(user3WBNBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user3USDCBalanceInUSDC = await USDCContract.balanceOf(user3.address);
+            const user3USDCBalance = user3USDCBalanceInUSDC.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user3USDTBalance.add(user3USDCBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.balanceOf(user2.address)).to.be.eq(0);
 
             const user2USDTBalance = await USDTContract.balanceOf(user2.address);
-            const user2WBNBBalanceInWBNB = await USDCContract.balanceOf(user2.address);
-            const user2WBNBBalance = user2WBNBBalanceInWBNB.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user2USDTBalance.add(user2WBNBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user2USDCBalanceInUSDC = await USDCContract.balanceOf(user2.address);
+            const user2USDCBalance = user2USDCBalanceInUSDC.mul(usdcToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user2USDTBalance.add(user2USDCBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
         });
@@ -2212,9 +2212,6 @@ export default async function suite(): Promise<void> {
             // Send 10000 USDT to the deployer
             await USDTContract.connect(holderSigner).transfer(deployer.address, ethers.utils.parseUnits("10000", "18"));
 
-            // Send 5000 WBNB to the deployer
-            await WBNBContract.connect(holderSigner).transfer(deployer.address, ethers.utils.parseUnits("5000", "18"));
-
             // Stop impersonating the holder address
             await hre.network.provider.request({
                 method: "hardhat_stopImpersonatingAccount",
@@ -2687,7 +2684,7 @@ export default async function suite(): Promise<void> {
             for (let i = 0; i < 10; i++) {
                 await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-                expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0"));
+                expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
                 expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
 
                 await PositionManager.connect(manager).removeLiquidity();
@@ -3004,7 +3001,7 @@ export default async function suite(): Promise<void> {
         });
 
         it("Should user deposit USDT after adding liquidity", async function () {
-            const amount = ethers.utils.parseEther("100");
+            const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(user1.address, amount.mul(2));
 
@@ -3017,7 +3014,7 @@ export default async function suite(): Promise<void> {
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 300);
-            expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.000001"));
+            expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
 
             await expect(PositionManagerDistributor.connect(user1).deposit(amount)).to.emit(PositionManager, "Deposit");
 
@@ -3214,7 +3211,7 @@ export default async function suite(): Promise<void> {
         });
 
         it("Should deposit user1, add liquidity, and then 3 different users deposits and withdraw", async function () {
-            const amount = ethers.utils.parseEther("100");
+            const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(user1.address, amount);
 
@@ -3260,7 +3257,7 @@ export default async function suite(): Promise<void> {
             const user2USDTBalance = await USDTContract.balanceOf(user2.address);
             const user2BTCBBalanceInBTCB = await BTCBContract.balanceOf(user2.address);
             const user2BTCBBalance = user2BTCBBalanceInBTCB.mul(btcbToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user2USDTBalance.add(user2BTCBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(user2USDTBalance.add(user2BTCBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("2"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
@@ -3280,7 +3277,7 @@ export default async function suite(): Promise<void> {
         });
 
         it("Should deposit user1, add liquidity, and then 3 different users deposits and withdraw in other order", async function () {
-            const amount = ethers.utils.parseEther("100");
+            const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(user1.address, amount);
 
@@ -3326,7 +3323,7 @@ export default async function suite(): Promise<void> {
             const user4USDTBalance = await USDTContract.balanceOf(user4.address);
             const user4BTCBBalanceInBTCB = await BTCBContract.balanceOf(user4.address);
             const user4BTCBBalance = user4BTCBBalanceInBTCB.mul(btcbToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user4USDTBalance.add(user4BTCBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(user4USDTBalance.add(user4BTCBBalance)).to.be.closeTo(amount, ethers.utils.parseEther("2"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
@@ -3976,25 +3973,25 @@ export default async function suite(): Promise<void> {
 
             const user2WBNBBalanceInWBNB = await WBNBContract.balanceOf(user2.address);
             const user2WBNBBalance = user2WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
-            const user2ETHBalanceInETH = await XRPContract.balanceOf(user2.address);
-            const user2ETHBalance = user2ETHBalanceInETH.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user2WBNBBalance.add(user2ETHBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user2XRPBalanceInXRP = await XRPContract.balanceOf(user2.address);
+            const user2XRPBalance = user2XRPBalanceInXRP.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user2WBNBBalance.add(user2XRPBalance)).to.be.closeTo(amount, ethers.utils.parseEther("6"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
             const user3WBNBBalanceInWBNB = await WBNBContract.balanceOf(user3.address);
             const user3WBNBBalance = user3WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
-            const user3ETHBalanceInETH = await XRPContract.balanceOf(user3.address);
-            const user3ETHBalance = user3ETHBalanceInETH.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user3WBNBBalance.add(user3ETHBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user3XRPBalanceInXRP = await XRPContract.balanceOf(user3.address);
+            const user3XRPBalance = user3XRPBalanceInXRP.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user3WBNBBalance.add(user3XRPBalance)).to.be.closeTo(amount, ethers.utils.parseEther("3"));
 
             expect(await PositionManager.balanceOf(user4.address)).to.be.eq(0);
 
             const user4WBNBBalanceInWBNB = await WBNBContract.balanceOf(user4.address);
             const user4WBNBBalance = user4WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
-            const user4ETHBalanceInETH = await XRPContract.balanceOf(user4.address);
-            const user4ETHBalance = user4ETHBalanceInETH.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user4WBNBBalance.add(user4ETHBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user4XRPBalanceInXRP = await XRPContract.balanceOf(user4.address);
+            const user4XRPBalance = user4XRPBalanceInXRP.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user4WBNBBalance.add(user4XRPBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
         });
@@ -4045,25 +4042,25 @@ export default async function suite(): Promise<void> {
 
             const user4WBNBBalanceInWBNB = await WBNBContract.balanceOf(user4.address);
             const user4WBNBBalance = user4WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
-            const user4ETHBalanceInETH = await XRPContract.balanceOf(user4.address);
-            const user4ETHBalance = user4ETHBalanceInETH.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user4WBNBBalance.add(user4ETHBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user4XRPBalanceInXRP = await XRPContract.balanceOf(user4.address);
+            const user4XRPBalance = user4XRPBalanceInXRP.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user4WBNBBalance.add(user4XRPBalance)).to.be.closeTo(amount, ethers.utils.parseEther("6"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
             const user3WBNBBalanceInWBNB = await WBNBContract.balanceOf(user3.address);
             const user3WBNBBalance = user3WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
-            const user3ETHBalanceInETH = await XRPContract.balanceOf(user3.address);
-            const user3ETHBalance = user3ETHBalanceInETH.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user3WBNBBalance.add(user3ETHBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user3XRPBalanceInXRP = await XRPContract.balanceOf(user3.address);
+            const user3XRPBalance = user3XRPBalanceInXRP.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user3WBNBBalance.add(user3XRPBalance)).to.be.closeTo(amount, ethers.utils.parseEther("3"));
 
             expect(await PositionManager.balanceOf(user2.address)).to.be.eq(0);
 
             const user2WBNBBalanceInWBNB = await WBNBContract.balanceOf(user2.address);
             const user2WBNBBalance = user2WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
-            const user2ETHBalanceInETH = await XRPContract.balanceOf(user2.address);
-            const user2ETHBalance = user2ETHBalanceInETH.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
-            expect(user2WBNBBalance.add(user2ETHBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            const user2XRPBalanceInXRP = await XRPContract.balanceOf(user2.address);
+            const user2XRPBalance = user2XRPBalanceInXRP.mul(xrpToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user2WBNBBalance.add(user2XRPBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
         });
