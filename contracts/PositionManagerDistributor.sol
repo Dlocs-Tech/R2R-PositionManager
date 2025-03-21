@@ -45,26 +45,20 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
 
     /**
      * @dev Parameters to create the PositionManager contract
-     * @param swapRouter Address of the swap router
-     * @param usdtToToken0Path Path used to swap USDT to token0
-     * @param usdtToToken1Path Path used to swap USDT to token1
-     * @param token0ToUsdtPath Path used to swap token0 to USDT
-     * @param token1ToUsdtPath Path used to swap token1 to USDT
-     * @param dataFeed Address of the data feed used to get the token1 price in USD
-     * @param pool Address of the PancakeSwap V3 pool
-     * @param fundsDistributor Address of the funds distributor contract
-     * @param fundsDistributorPercentage Percentage of the funds destined to the funds distributor
+     * @param dataFeedAddress Address of the data feed used to get the token1 price in USD
+     * @param poolAddress Address of the main PancakeSwap V3 pool
+     * @param pool0Address Address of the pool to swap USDT to token0
+     * @param pool1Address Address of the pool to swap USDT to token1
+     * @param fundsDistributorAddress Address of the funds distributor contract
+     * @param fundsDistributorFeePercentage Percentage of the funds destined to the funds distributor
      */
     struct CreatePositionManagerParams {
-        address swapRouter;
-        bytes usdtToToken0Path;
-        bytes usdtToToken1Path;
-        bytes token0ToUsdtPath;
-        bytes token1ToUsdtPath;
-        address dataFeed;
-        address pool;
-        address fundsDistributor;
-        uint256 fundsDistributorPercentage;
+        address dataFeedAddress;
+        address poolAddress;
+        address pool0Address;
+        address pool1Address;
+        address fundsDistributorAddress;
+        uint256 fundsDistributorFeePercentage;
     }
 
     /// @notice Pool of USDT/WNative
@@ -102,16 +96,13 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
         wnative = IERC20(pool.token1());
 
         sharesContract = new PositionManager(
-            params.swapRouter,
-            params.usdtToToken0Path,
-            params.usdtToToken1Path,
-            params.token0ToUsdtPath,
-            params.token1ToUsdtPath,
+            params.dataFeedAddress,
+            params.poolAddress,
+            params.pool0Address,
+            params.pool1Address,
             address(usdt),
-            params.dataFeed,
-            params.pool,
-            params.fundsDistributor,
-            params.fundsDistributorPercentage
+            params.fundsDistributorAddress,
+            params.fundsDistributorFeePercentage
         );
 
         sharesContract.grantRole(0x00, msg.sender);
@@ -218,7 +209,9 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
     }
 
     function _swapUsdtAndTransfer(uint256 amountIn, uint256 amountOutMin, address recipient) internal {
-        IPancakeV3Pool(pool).swap(
+        if (amountIn == 0) revert InvalidEntry();
+
+        pool.swap(
             address(this),
             true, // token0 to token1
             int256(amountIn),
@@ -236,9 +229,7 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
         if (msg.sender != address(pool)) revert NotPool();
 
-        if (amount0Delta > 0)
-            usdt.safeTransfer(msg.sender, uint256(amount0Delta));
-        else if (amount1Delta > 0)
-            wnative.safeTransfer(msg.sender, uint256(amount1Delta));
+        if (amount0Delta > 0) usdt.safeTransfer(msg.sender, uint256(amount0Delta));
+        else if (amount1Delta > 0) wnative.safeTransfer(msg.sender, uint256(amount1Delta));
     }
 }

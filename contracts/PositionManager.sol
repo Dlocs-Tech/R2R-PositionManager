@@ -2,20 +2,17 @@
 pragma solidity ^0.8.22;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
 import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
 import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
 import {FullMath} from "@aperture_finance/uni-v3-lib/src/FullMath.sol";
-import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
-import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {IPositionManagerDistributor} from "./interfaces/IPositionManagerDistributor.sol";
-import {AlgebraUtils} from "./utils/AlgebraUtils.sol";
-import {Path} from "./utils/AlgebraPath.sol";
 import {FeeManagement} from "./FeeManagement.sol";
 
 /**
@@ -28,7 +25,6 @@ import {FeeManagement} from "./FeeManagement.sol";
  */
 contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl, ReentrancyGuard, ERC20 {
     using SafeERC20 for IERC20;
-    using Path for bytes;
 
     /// @notice Precision used in the contract
     uint256 public constant PRECISION = 1e36;
@@ -44,6 +40,9 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
     /// @dev Error thrown when the caller is not the valid pool
     error NotPool();
+
+    /// @dev Error thrown when the balance is not enough
+    error NotEnoughBalance();
 
     /**
      * @notice Event emitted when a user deposits USDT and receives shares
@@ -76,25 +75,31 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
      */
     event LiquidityRemoved(int24 tickLower, int24 tickUpper, uint256 liquidity);
 
-    /// @notice Event emitted when the position is harvested
-    event PositionHarvested();
-
-    /// @notice Address of the swap router
-    address internal immutable _swapRouter;
-
     /// @dev Address of the data feed used to get the token1 price in USD
     AggregatorV3Interface internal immutable _dataFeed;
 
-    /// @notice Address of the PancakeSwap V3 pool
+    /// @dev Address of the main PancakeSwap V3 pool (where the position is)
     IPancakeV3Pool internal immutable _pool;
 
-    /// @notice Factory address
+    /// @dev Address of the pool to swap USDT to token0 and vice versa (zero if not necessary)
+    IPancakeV3Pool internal immutable _pool0;
+
+    /// @dev Boolean to indicate if the pool is token0/USDT (true) or USDT/token0 (false)
+    bool internal immutable _pool0Direction;
+
+    /// @dev Address of the pool to swap USDT to token1 and vice versa (zero if not necessary)
+    IPancakeV3Pool internal immutable _pool1;
+
+    /// @dev Boolean to indicate if the pool is token1/USDT (true) or USDT/token1 (false)
+    bool internal immutable _pool1Direction;
+
+    /// @dev Factory address
     address internal immutable _factory;
 
-    /// @notice Token0 of the pool
+    /// @dev Token0 of the pool
     IERC20 internal immutable _token0;
 
-    /// @notice Token1 of the pool
+    /// @dev Token1 of the pool
     IERC20 internal immutable _token1;
 
     /// @notice Address of the funds distributor contract
@@ -103,23 +108,11 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     /// @notice Percentage of the funds destined to the funds distributor
     uint256 public fundsDistributorPercentage;
 
-    /// @notice Max slippage percentage allowed in swaps with 4 decimals
+    /// @dev Max slippage percentage allowed in swaps with 4 decimals
     uint256 internal _slippage = 10_000; // 1%
 
     /// @notice Minimum USDT deposit amount
     uint256 public minDepositAmount = 10e18; // 10 USDT
-
-    /// @notice Path used to swap USDT to token0
-    bytes public usdtToToken0Path;
-
-    /// @notice Path used to swap USDT to token1
-    bytes public usdtToToken1Path;
-
-    /// @notice Path used to swap token0 to USDT
-    bytes public token0ToUsdtPath;
-
-    /// @notice Path used to swap token1 to USDT
-    bytes public token1ToUsdtPath;
 
     /// @dev Lower tick of the position
     int24 internal _tickLower;
@@ -127,7 +120,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     /// @dev Upper tick of the position
     int24 internal _tickUpper;
 
-    /// @notice Bool switch to prevent reentrancy on the mint callback
+    /// @dev Bool switch to prevent reentrancy on the mint callback
     bool internal _minting;
 
     /// @dev Modifier to check if the caller is the factory
@@ -138,55 +131,44 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
     /**
      * @notice Constructor
-     * @param swapRouterAddress Address of the swap router
-     * @param usdtToToken0SwapPath Path used to swap USDT to token0
-     * @param usdtToToken1SwapPath Path used to swap USDT to token1
-     * @param token0ToUsdtSwapPath Path used to swap token0 to USDT
-     * @param token1ToUsdtSwapPath Path used to swap token1 to USDT
-     * @param usdtAddress Address of the USDT token
      * @param dataFeedAddress Address of the data feed used to get the token1 price in USD
-     * @param poolAddress Address of the PancakeSwap V3 pool
+     * @param poolAddress Address of the main PancakeSwap V3 pool
+     * @param pool0Address Address of the pool to swap USDT to token0 (zero if not necessary)
+     * @param pool1Address Address of the pool to swap USDT to token1 (zero if not necessary)
+     * @param usdtAddress Address of the USDT token
      * @param fundsDistributorAddress Address of the funds distributor contract
      * @param fundsDistributorFeePercentage Percentage of the funds destined to the funds distributor
      */
     constructor(
-        address swapRouterAddress,
-        bytes memory usdtToToken0SwapPath,
-        bytes memory usdtToToken1SwapPath,
-        bytes memory token0ToUsdtSwapPath,
-        bytes memory token1ToUsdtSwapPath,
-        address usdtAddress,
         address dataFeedAddress,
         address poolAddress,
+        address pool0Address,
+        address pool1Address,
+        address usdtAddress,
         address fundsDistributorAddress,
         uint256 fundsDistributorFeePercentage
     ) ERC20("PositionManager", "PM") {
         if (
-            swapRouterAddress == address(0) ||
-            usdtAddress == address(0) ||
             dataFeedAddress == address(0) ||
             poolAddress == address(0) ||
+            usdtAddress == address(0) ||
             fundsDistributorAddress == address(0) ||
             fundsDistributorFeePercentage > MAX_PERCENTAGE ||
             fundsDistributorFeePercentage == 0
         ) revert InvalidInput();
 
-        _swapRouter = swapRouterAddress;
-
-        usdtToToken0Path = usdtToToken0SwapPath;
-        usdtToToken1Path = usdtToToken1SwapPath;
-
-        token0ToUsdtPath = token0ToUsdtSwapPath;
-        token1ToUsdtPath = token1ToUsdtSwapPath;
-
-        usdt = IERC20(usdtAddress);
-
         _dataFeed = AggregatorV3Interface(dataFeedAddress);
 
         _pool = IPancakeV3Pool(poolAddress);
 
+        _pool0 = IPancakeV3Pool(pool0Address);
+
+        _pool1 = IPancakeV3Pool(pool1Address);
+
         _token0 = IERC20(_pool.token0());
         _token1 = IERC20(_pool.token1());
+
+        usdt = IERC20(usdtAddress);
 
         fundsDistributor = fundsDistributorAddress;
 
@@ -195,6 +177,10 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         _factory = msg.sender;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
+        if (address(_pool0) != address(0) && _pool0.token1() == usdtAddress) _pool0Direction = true;
+
+        if (address(_pool1) != address(0) && _pool1.token1() == usdtAddress) _pool1Direction = true;
     }
 
     /**
@@ -215,22 +201,28 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         // Invest the USDT in the current position if the contract is in position
         if (_tickLower != _tickUpper) {
-            uint256 amountOutMin = _getAmountMin(depositAmount, token1Price, false);
-
             // Swap user USDT to token1
-            uint256 userLiq = _swapUsingPath(usdtToToken1Path, depositAmount, amountOutMin);
+            uint256 userLiq = _swapUsingPool(
+                _pool1,
+                depositAmount,
+                _getAmountMin(depositAmount, token1Price, false),
+                !_pool1Direction, // USDT to token1
+                _pool1Direction
+            );
 
             uint256 usdtAmount = usdt.balanceOf(address(this));
 
-            if (usdtAmount > 0) {
-                amountOutMin = _getAmountMin(usdtAmount, token1Price, false);
-
-                _swapUsingPath(usdtToToken1Path, usdtAmount, amountOutMin);
-            }
+            _swapUsingPool(
+                _pool1,
+                usdtAmount,
+                _getAmountMin(usdtAmount, token1Price, false),
+                !_pool1Direction, // USDT to token1
+                _pool1Direction
+            );
 
             uint256 totalLiq = _token1.balanceOf(address(this));
 
-            harvest();
+            _harvest();
 
             // Burn liquidity from the position
             _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
@@ -257,19 +249,13 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
             uint256 amount1ToSwap = FullMath.mulDiv(totalLiq, percentage0, PRECISION);
 
-            // If current tick is out of the range and desired token is token0, couldn't swap
-            if (amount1ToSwap != 0) {
-                // Approve token1 to pool
-                _approveToken(_token1, address(_pool), amount1ToSwap);
-
-                _pool.swap(
-                    address(this),
-                    false, // token1 to token0
-                    int256(amount1ToSwap),
-                    uint160(FullMath.mulDiv(sqrtPriceByTick, MAX_PERCENTAGE + _slippage, MAX_PERCENTAGE)),
-                    ""
-                );
-            }
+            _swapUsingPool(
+                _pool,
+                amount1ToSwap,
+                _getAmountMin(amount1ToSwap, price, true),
+                false, // token1 to token0
+                true
+            );
 
             _addLiquidity();
         } else {
@@ -304,7 +290,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         // Contract is in position
         if (_tickLower != _tickUpper) {
-            harvest();
+            _harvest();
 
             // Burn liquidity from the position
             _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
@@ -350,7 +336,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         _tickLower = tickLower;
         _tickUpper = tickUpper;
 
-        harvest();
+        _harvest();
 
         // Swap USDT to token1
         uint256 usdtAmount = usdt.balanceOf(address(this));
@@ -359,9 +345,15 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        uint256 amountOutMin = _getAmountMin(usdtAmount, token1Price, false);
+        _swapUsingPool(
+            _pool1,
+            usdtAmount,
+            _getAmountMin(usdtAmount, token1Price, false),
+            !_pool1Direction, // USDT to token1
+            _pool1Direction
+        );
 
-        uint256 contractLiq = _swapUsingPath(usdtToToken1Path, usdtAmount, amountOutMin);
+        uint256 contractLiq = _token1.balanceOf(address(this));
 
         // Calculate the price of token1 over token0
         (, int24 tick) = _priceAndTick();
@@ -375,19 +367,13 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 amount1ToSwap = FullMath.mulDiv(contractLiq, percentage0, PRECISION);
 
-        if (amount1ToSwap != 0) {
-            // If current tick is out of the range, couldn't swap
-            // Approve token1 to pool
-            _approveToken(_token1, address(_pool), amount1ToSwap);
-
-            _pool.swap(
-                address(this),
-                false, // token1 to token0
-                int256(amount1ToSwap),
-                uint160(FullMath.mulDiv(sqrtPriceByTick, MAX_PERCENTAGE + _slippage, MAX_PERCENTAGE)),
-                ""
-            );
-        }
+        _swapUsingPool(
+            _pool,
+            amount1ToSwap,
+            _getAmountMin(amount1ToSwap, price, true),
+            false, // token1 to token0
+            true
+        );
 
         _addLiquidity();
     }
@@ -401,18 +387,22 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         if (_tickLower == _tickUpper) revert InvalidInput();
         if (totalSupply() == 0) revert InvalidInput(); // Shouldn't happen
 
-        harvest();
+        _harvest();
 
         _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
 
         // Swap token0 and token1 to USDT
-        (uint256 pool0, uint256 pool1) = getTotalAmounts();
+        (uint256 token0Amount, uint256 token1Amount) = getTotalAmounts();
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        uint256 amountOutMin = _getAmountMin(pool1, token1Price, true);
-
-        _swapUsingPath(token1ToUsdtPath, pool1, amountOutMin);
+        _swapUsingPool(
+            _pool1,
+            token1Amount,
+            _getAmountMin(token1Amount, token1Price, true),
+            _pool1Direction, // token1 to USDT
+            !_pool1Direction
+        );
 
         // Calculate the price of token1 over token0
         (, int24 tick) = _priceAndTick();
@@ -421,18 +411,21 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
 
-        amountOutMin = FullMath.mulDiv(pool0, price, PRECISION); // amountOutMin in token0 to token1
+        uint256 amountOutMin = FullMath.mulDiv(token0Amount, price, PRECISION); // amountOutMin in token0 to token1
 
-        amountOutMin = _getAmountMin(amountOutMin, token1Price, true);
-
-        _swapUsingPath(token0ToUsdtPath, pool0, amountOutMin);
+        _swapUsingPool(
+            _pool0,
+            token0Amount,
+            _getAmountMin(amountOutMin, token1Price, true),
+            _pool0Direction, // token0 to USDT
+            !_pool0Direction
+        );
 
         // Set the contract to not in position
         _tickLower = _tickUpper = 0;
     }
 
-    /// @notice Function to collect the fees accumulated by the position and send them to the factory
-    function harvest() public {
+    function _harvest() internal {
         (uint256 pool0Before, uint256 pool1Before) = getTotalAmounts();
 
         // Collect fees
@@ -445,10 +438,15 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        uint256 amountOutMin = _getAmountMin(amount1, token1Price, true);
-
         // Swap token1 to USDT
-        amount1 = _swapUsingPath(token1ToUsdtPath, amount1, amountOutMin);
+        // amount1 = _swapUsingPath(token1ToUsdtPath, amount1, amountOutMin);
+        amount1 = _swapUsingPool(
+            _pool1,
+            amount1,
+            _getAmountMin(amount1, token1Price, true),
+            _pool1Direction, // token1 to USDT
+            !_pool1Direction
+        );
 
         // Calculate the price of token1 over token0
         (, int24 tick) = _priceAndTick();
@@ -457,16 +455,19 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
 
-        amountOutMin = FullMath.mulDiv(amount0, PRECISION, price); // amountOutMin in token0 to token1
-
-        amountOutMin = _getAmountMin(amountOutMin, token1Price, true);
+        uint256 amountOutMin = FullMath.mulDiv(amount0, PRECISION, price); // amountOutMin in token0 to token1
 
         // Swap token0 to USDT
-        amount0 = _swapUsingPath(token0ToUsdtPath, amount0, amountOutMin);
+        // amount0 = _swapUsingPath(token0ToUsdtPath, amount0, amountOutMin);
+        amount0 = _swapUsingPool(
+            _pool0,
+            amount0,
+            _getAmountMin(amountOutMin, token1Price, true),
+            _pool0Direction, // token0 to USDT
+            !_pool0Direction
+        );
 
         if (amount0 + amount1 > 0) usdt.safeTransfer(_factory, amount0 + amount1);
-
-        emit PositionHarvested();
     }
 
     /// @notice Function to distribute the rewards
@@ -510,22 +511,6 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         fundsDistributorPercentage = fundsDistributorFeePercentage;
     }
 
-    function setUsdtToToken0Path(bytes memory usdtToToken0SwapPath) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        usdtToToken0Path = usdtToToken0SwapPath;
-    }
-
-    function setUsdtToToken1Path(bytes memory usdtToToken1SwapPath) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        usdtToToken1Path = usdtToToken1SwapPath;
-    }
-
-    function setToken0ToUsdtPath(bytes memory token0ToUsdtSwapPath) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        token0ToUsdtPath = token0ToUsdtSwapPath;
-    }
-
-    function setToken1ToUsdtPath(bytes memory token1ToUsdtSwapPath) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        token1ToUsdtPath = token1ToUsdtSwapPath;
-    }
-
     function setSlippage(uint256 slippage) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (slippage > MAX_PERCENTAGE) revert InvalidInput();
         _slippage = slippage;
@@ -551,11 +536,9 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     function _getAmountMin(uint256 amount, uint256 price, bool fromToken) internal view returns (uint256) {
         uint256 amountOutMin;
 
-        if (fromToken) {
+        if (fromToken)
             amountOutMin = FullMath.mulDiv(amount, price, PRECISION) / 10 ** 8; // 10**8 is the precision of the token1Price
-        } else {
-            amountOutMin = FullMath.mulDiv(amount, (PRECISION) * 10 ** 8, price); // 10**8 is the precision of the token1Price
-        }
+        else amountOutMin = FullMath.mulDiv(amount, (PRECISION) * 10 ** 8, price); // 10**8 is the precision of the token1Price
 
         // amountOutMin with slippage applied
         return FullMath.mulDiv(amountOutMin, MAX_PERCENTAGE - _slippage, MAX_PERCENTAGE);
@@ -569,14 +552,36 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         return uint256(price);
     }
 
-    function _swapUsingPath(bytes memory path, uint256 amount, uint256 amountOutMin) internal returns (uint256) {
-        if (path.length == 0 || amount == 0) return amount;
+    function _swapUsingPool(
+        IPancakeV3Pool pool,
+        uint256 amountIn,
+        uint256 amountOutMin,
+        bool zeroForOne,
+        bool sqrtPriceLimitX96Case // false = min, true = max
+    ) internal returns (uint256) {
+        uint256 balanceBefore;
 
-        (address pathToken0, ) = path.decodeFirstPool();
+        if (address(pool) == address(0) || amountIn == 0) return amountIn;
 
-        _approveToken(IERC20(pathToken0), _swapRouter, amount);
+        if (zeroForOne) balanceBefore = IERC20(pool.token1()).balanceOf(address(this));
+        else balanceBefore = IERC20(pool.token0()).balanceOf(address(this));
 
-        return AlgebraUtils.swap(_swapRouter, path, amount, amountOutMin);
+        pool.swap(
+            address(this),
+            zeroForOne,
+            int256(amountIn),
+            sqrtPriceLimitX96Case ? uint160(TickMath.MAX_SQRT_RATIO) - 1 : uint160(TickMath.MIN_SQRT_RATIO + 1),
+            ""
+        );
+
+        uint256 amountOut;
+
+        if (zeroForOne) amountOut = IERC20(pool.token1()).balanceOf(address(this)) - balanceBefore;
+        else amountOut = IERC20(pool.token0()).balanceOf(address(this)) - balanceBefore;
+
+        if (amountOut < amountOutMin) revert NotEnoughBalance();
+
+        return amountOut;
     }
 
     function _liquidityForShares(int24 tickLower, int24 tickUpper, uint256 shares) internal view returns (uint128) {
@@ -611,7 +616,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         // Flip minting to true and call the pool to mint the liquidity
         _minting = true;
-        IPancakeV3Pool(_pool).mint(address(this), _tickLower, _tickUpper, liquidity, "");
+        _pool.mint(address(this), _tickLower, _tickUpper, liquidity, "");
 
         emit LiquidityAdded(_tickLower, _tickUpper, liquidity);
     }
@@ -640,12 +645,6 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         _pool.collect(address(this), _tickLower, _tickUpper, type(uint128).max, type(uint128).max);
     }
 
-    function _approveToken(IERC20 token, address spender, uint256 amount) internal {
-        if (token.allowance(address(this), spender) > 0) token.safeApprove(spender, 0);
-
-        token.safeApprove(spender, amount);
-    }
-
     /// Callback functions
 
     function pancakeswapV3MintCallback(uint256 amount0, uint256 amount1, bytes memory /*data*/) external {
@@ -658,23 +657,17 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
-        if (msg.sender != address(_pool)) revert NotPool();
+        if (msg.sender != address(_pool) && msg.sender != address(_pool0) && msg.sender != address(_pool1)) revert NotPool();
 
-        if (amount0Delta > 0) {
-            IERC20(_token0).safeTransfer(msg.sender, uint256(amount0Delta));
-        } else if (amount1Delta > 0) {
-            IERC20(_token1).safeTransfer(msg.sender, uint256(amount1Delta));
-        }
+        if (amount0Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token0()).safeTransfer(msg.sender, uint256(amount0Delta));
+        else if (amount1Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token1()).safeTransfer(msg.sender, uint256(amount1Delta));
     }
 
     function pancakeV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata /*data*/) external {
         if (msg.sender != address(_pool)) revert NotPool();
 
-        if (amount0Owed > 0) {
-            IERC20(_token0).safeTransfer(msg.sender, uint256(amount0Owed));
-        }
-        if (amount1Owed > 0) {
-            IERC20(_token1).safeTransfer(msg.sender, uint256(amount1Owed));
-        }
+        if (amount0Owed > 0) _token0.safeTransfer(msg.sender, uint256(amount0Owed));
+
+        if (amount1Owed > 0) _token1.safeTransfer(msg.sender, uint256(amount1Owed));
     }
 }

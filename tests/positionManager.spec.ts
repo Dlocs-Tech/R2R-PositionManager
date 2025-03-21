@@ -850,7 +850,6 @@ export default async function suite(): Promise<void> {
 
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(0);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
-
         });
 
         it("Should user deposit USDT after adding liquidity", async function () {
@@ -4122,7 +4121,7 @@ export default async function suite(): Promise<void> {
 
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
 
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 8; i++) {
                 await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
                 expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0"));
@@ -4131,15 +4130,15 @@ export default async function suite(): Promise<void> {
 
                 await PositionManager.connect(manager).removeLiquidity();
 
-                expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("53"));
+                expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("40"));
             }
 
-            // Lose max 53 USDT in 10 add/remove liquidity
+            // Lose max 40 USDT in 8 add/remove liquidity
             await PositionManagerDistributor.connect(user1).withdraw();
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            expect(user1USDTBalance).to.be.closeTo(amount, ethers.utils.parseEther("53"));
+            expect(user1USDTBalance).to.be.closeTo(amount, ethers.utils.parseEther("40"));
         });
 
         it("Should set a deposit fee and charge it in a deposit", async function () {
