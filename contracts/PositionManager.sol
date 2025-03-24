@@ -508,6 +508,54 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         _addLiquidity();
     }
 
+    function reAddLiquidity() external onlyRole(MANAGER_ROLE) {
+        // Only re add liquidity if the contract is in position
+        if (_tickLower == _tickUpper) revert InvalidEntry();
+        if (totalSupply() == 0) revert InvalidInput(); // Shouldn't happen
+
+        _harvest();
+
+        (uint256 bal0, uint256 bal1) = getTotalAmounts();
+
+        uint256 price = _getPoolTokensPrice();
+
+        uint256 totalLiq = FullMath.mulDiv(bal0, price, PRECISION) + bal1;
+
+        // Calculate the percentage of the pool
+        uint256 percentage0 = getRangePercentage(FullMath.mulDiv(totalLiq, PRECISION, price), totalLiq);
+
+        // Fix the amounts of the contract (bal0 and bal1) to comply with the percentage
+        uint256 currentPercentage0 = PRECISION - FullMath.mulDiv(bal1, PRECISION, totalLiq);
+
+        if (currentPercentage0 > percentage0) {
+            uint256 token1Price = _getChainlinkPrice() * PRECISION;
+
+            uint256 totalLiq0 = bal0 + FullMath.mulDiv(bal1, PRECISION, price);
+            uint256 amount0ToSwap = bal0 - FullMath.mulDiv(totalLiq0, percentage0, PRECISION);
+
+            _swapUsingPool(
+                _pool,
+                amount0ToSwap,
+                _getAmountMin(amount0ToSwap, token1Price, false),
+                true, // token0 to token1
+                false
+            );
+        } else {
+            uint256 percentage1 = PRECISION - percentage0;
+            uint256 amount1ToSwap = bal1 - FullMath.mulDiv(totalLiq, percentage1, PRECISION);
+
+            _swapUsingPool(
+                _pool,
+                amount1ToSwap,
+                _getAmountMin(amount1ToSwap, price, true),
+                false, // token1 to token0
+                true
+            );
+        }
+
+        _addLiquidity();
+    }
+
     /// @notice Function to distribute the rewards
     function distributeRewards(uint256 amountOutMin) external onlyRole(MANAGER_ROLE) {
         IPositionManagerDistributor(_factory).distributeRewards(fundsDistributor, fundsDistributorPercentage, amountOutMin);

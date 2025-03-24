@@ -145,6 +145,33 @@ export default async function suite(): Promise<void> {
             expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
         });
 
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
+            expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+            expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.000000001"));
+            expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
+        });
+
         it("Should user deposit USDT after adding liquidity", async function () {
             const amount = ethers.utils.parseEther("1000");
 
@@ -891,6 +918,33 @@ export default async function suite(): Promise<void> {
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+        });
+
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.000000001"));
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
         });
 
@@ -1650,6 +1704,33 @@ export default async function suite(): Promise<void> {
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.3"));
         });
 
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.3"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0000001"));
+        });
+
         it("Should user deposit USDT after adding liquidity", async function () {
             const amount = ethers.utils.parseEther("1000");
 
@@ -2404,6 +2485,33 @@ export default async function suite(): Promise<void> {
 
             expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
+        });
+
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0000001"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0000000001"));
         });
 
         it("Should user deposit USDT after adding liquidity", async function () {
@@ -3168,6 +3276,33 @@ export default async function suite(): Promise<void> {
             expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
         });
 
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.3"));
+            expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+            expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0000001"));
+            expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+        });
+
         it("Should user deposit USDT after adding liquidity", async function () {
             const amount = ethers.utils.parseEther("1000");
 
@@ -3925,6 +4060,33 @@ export default async function suite(): Promise<void> {
 
             expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+        });
+
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00000001"));
         });
 
         it("Should user deposit USDT after adding liquidity", async function () {
