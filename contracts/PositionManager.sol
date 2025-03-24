@@ -183,6 +183,15 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         if (address(_pool1) != address(0) && _pool1.token1() == usdtAddress) _pool1Direction = true;
     }
 
+    function _getPoolTokensPrice() internal view returns (uint256) {
+        (, int24 tick) = _priceAndTick();
+
+        uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
+
+        // Price of token0 over token1
+        return FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+    }
+
     /**
      * @notice Function to deposit USDT and receive shares in return
      * @param depositAmount Amount of USDT to deposit
@@ -208,12 +217,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
             (uint256 bal0, uint256 bal1) = getTotalAmounts();
 
-            // Calculate the price of token1 over token0
-            (, int24 tick) = _priceAndTick();
-
-            uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
-
-            uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+            uint256 price = _getPoolTokensPrice();
 
             uint256 userLiq = FullMath.mulDiv(depositAmount, (PRECISION) * 10 ** 8, token1Price);
 
@@ -227,59 +231,54 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
             // Calculate the amount of token1 to swap
             uint256 percentage0 = getRangePercentage(FullMath.mulDiv(totalLiq, PRECISION, price), totalLiq);
-            {
-                // Time to fix the amounts of the contract (bal0 and bal1) to comply with the percentage
-                uint256 currentPercentage0 = PRECISION - FullMath.mulDiv(bal1, PRECISION, totalLiq);
 
-                if (currentPercentage0 > percentage0) {
-                    uint256 amount0ToSwap;
-                    {
-                        uint256 totalLiq0 = bal0 + FullMath.mulDiv(bal1, PRECISION, price);
-                        amount0ToSwap = bal0 - FullMath.mulDiv(totalLiq0, percentage0, PRECISION);
-                    }
-                    _swapUsingPool(
-                        _pool,
-                        amount0ToSwap,
-                        _getAmountMin(amount0ToSwap, token1Price, false),
-                        true, // token0 to token1
-                        false
-                    );
-                } else {
-                    uint256 percentage1 = PRECISION - percentage0;
-                    uint256 amount1ToSwap = bal1 - FullMath.mulDiv(totalLiq, percentage1, PRECISION);
+            // Fix the amounts of the contract (bal0 and bal1) to comply with the percentage
+            uint256 currentPercentage0 = PRECISION - FullMath.mulDiv(bal1, PRECISION, totalLiq);
 
-                    _swapUsingPool(
-                        _pool,
-                        amount1ToSwap,
-                        _getAmountMin(amount1ToSwap, price, true),
-                        false, // token1 to token0
-                        true
-                    );
-                }
+            if (currentPercentage0 > percentage0) {
+                uint256 totalLiq0 = bal0 + FullMath.mulDiv(bal1, PRECISION, price);
+                uint256 amount0ToSwap = bal0 - FullMath.mulDiv(totalLiq0, percentage0, PRECISION);
+
+                _swapUsingPool(
+                    _pool,
+                    amount0ToSwap,
+                    _getAmountMin(amount0ToSwap, token1Price, false),
+                    true, // token0 to token1
+                    false
+                );
+            } else {
+                uint256 percentage1 = PRECISION - percentage0;
+                uint256 amount1ToSwap = bal1 - FullMath.mulDiv(totalLiq, percentage1, PRECISION);
+
+                _swapUsingPool(
+                    _pool,
+                    amount1ToSwap,
+                    _getAmountMin(amount1ToSwap, price, true),
+                    false, // token1 to token0
+                    true
+                );
             }
-            // Get new percentage0
-            (, tick) = _priceAndTick();
-            sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
 
-            price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+            // Get new percentage0
+            price = _getPoolTokensPrice();
 
             (bal0, bal1) = getTotalAmounts();
             totalLiq = FullMath.mulDiv(bal0, price, PRECISION) + bal1;
             percentage0 = getRangePercentage(FullMath.mulDiv(totalLiq, PRECISION, price), totalLiq);
 
             uint256 amountToSwapToToken0 = FullMath.mulDiv(depositAmount, percentage0, PRECISION);
-            {
-                uint256 token0Price = FullMath.mulDiv(token1Price, price, PRECISION);
 
-                // Swap USDT to token0
-                _swapUsingPool(
-                    _pool0,
-                    amountToSwapToToken0,
-                    _getAmountMin(amountToSwapToToken0, token0Price, false),
-                    !_pool0Direction, // USDT to token0
-                    _pool0Direction
-                );
-            }
+            uint256 token0Price = FullMath.mulDiv(token1Price, price, PRECISION);
+
+            // Swap USDT to token0
+            _swapUsingPool(
+                _pool0,
+                amountToSwapToToken0,
+                _getAmountMin(amountToSwapToToken0, token0Price, false),
+                !_pool0Direction, // USDT to token0
+                _pool0Direction
+            );
+
             uint256 amountToSwapToToken1 = depositAmount - amountToSwapToToken0;
 
             // Swap USDT to token1
@@ -379,13 +378,8 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        // Calculate the price of token0 over token1
-        (, int24 tick) = _priceAndTick();
-
-        uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
-
         // Price of token0 over token1
-        uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+        uint256 price = _getPoolTokensPrice();
 
         uint256 token0Price = FullMath.mulDiv(token1Price, price, PRECISION);
 
@@ -444,12 +438,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             !_pool1Direction
         );
 
-        // Calculate the price of token1 over token0
-        (, int24 tick) = _priceAndTick();
-
-        uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
-
-        uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+        uint256 price = _getPoolTokensPrice();
 
         uint256 amountOutMin = FullMath.mulDiv(token0Amount, price, PRECISION); // amountOutMin in token0 to token1
 
@@ -487,10 +476,6 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     /// @dev The ticks are the same if the contract is not in position
     function getTickRange() public view returns (int24, int24) {
         return (_tickLower, _tickUpper);
-    }
-
-    function getAmount0ForLiquidity(uint160 sqrtRatioAX96, uint160 sqrtRatioBX96, uint128 liquidity) external pure returns (uint256 amount0) {
-        return LiquidityAmounts.getAmount0ForLiquidity(sqrtRatioAX96, sqrtRatioBX96, liquidity);
     }
 
     function getTotalAmounts() public view returns (uint256 total0, uint256 total1) {
@@ -541,12 +526,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             !_pool1Direction
         );
 
-        // Calculate the price of token1 over token0
-        (, int24 tick) = _priceAndTick();
-
-        uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
-
-        uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+        uint256 price = _getPoolTokensPrice();
 
         uint256 amountOutMin = FullMath.mulDiv(amount0, PRECISION, price); // amountOutMin in token0 to token1
 
