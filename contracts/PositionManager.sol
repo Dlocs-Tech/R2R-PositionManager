@@ -201,31 +201,12 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         // Invest the USDT in the current position if the contract is in position
         if (_tickLower != _tickUpper) {
-            // Swap user USDT to token1
-            uint256 userLiq = _swapUsingPool(
-                _pool1,
-                depositAmount,
-                _getAmountMin(depositAmount, token1Price, false),
-                !_pool1Direction, // USDT to token1
-                _pool1Direction
-            );
-
             _harvest();
 
             // Burn liquidity from the position
             _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
 
-            uint256 amount0 = _token0.balanceOf(address(this));
-
-            _swapUsingPool(
-                _pool,
-                amount0,
-                _getAmountMin(amount0, token1Price, false),
-                true, // token0 to token1
-                false
-            );
-
-            uint256 totalLiq = _token1.balanceOf(address(this));
+            (uint256 bal0, uint256 bal1) = getTotalAmounts();
 
             // Calculate the price of token1 over token0
             (, int24 tick) = _priceAndTick();
@@ -234,25 +215,80 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
             uint256 price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
 
-            // Calculate contract balance in token1
-            (, uint256 pool1) = getTotalAmounts();
+            uint256 userLiq = FullMath.mulDiv(depositAmount, (PRECISION) * 10 ** 8, token1Price);
 
-            uint256 token1ContractAmount = pool1 - userLiq;
+            if (address(_pool0) == address(0)) bal0 -= depositAmount;
+            else if (address(_pool1) == address(0)) bal1 -= depositAmount;
+
+            uint256 totalLiq = FullMath.mulDiv(bal0, price, PRECISION) + bal1;
 
             // Calculate shares to mint (totalSupply cannot be 0 if the contract is in position)
-            shares = FullMath.mulDiv(userLiq, totalSupply(), token1ContractAmount);
+            shares = FullMath.mulDiv(userLiq, totalSupply(), totalLiq);
 
             // Calculate the amount of token1 to swap
             uint256 percentage0 = getRangePercentage(FullMath.mulDiv(totalLiq, PRECISION, price), totalLiq);
+            {
+                // Time to fix the amounts of the contract (bal0 and bal1) to comply with the percentage
+                uint256 currentPercentage0 = PRECISION - FullMath.mulDiv(bal1, PRECISION, totalLiq);
 
-            uint256 amount1ToSwap = FullMath.mulDiv(totalLiq, percentage0, PRECISION);
+                if (currentPercentage0 > percentage0) {
+                    uint256 amount0ToSwap;
+                    {
+                        uint256 totalLiq0 = bal0 + FullMath.mulDiv(bal1, PRECISION, price);
+                        amount0ToSwap = bal0 - FullMath.mulDiv(totalLiq0, percentage0, PRECISION);
+                    }
+                    _swapUsingPool(
+                        _pool,
+                        amount0ToSwap,
+                        _getAmountMin(amount0ToSwap, token1Price, false),
+                        true, // token0 to token1
+                        false
+                    );
+                } else {
+                    uint256 percentage1 = PRECISION - percentage0;
+                    uint256 amount1ToSwap = bal1 - FullMath.mulDiv(totalLiq, percentage1, PRECISION);
 
+                    _swapUsingPool(
+                        _pool,
+                        amount1ToSwap,
+                        _getAmountMin(amount1ToSwap, price, true),
+                        false, // token1 to token0
+                        true
+                    );
+                }
+            }
+            // Get new percentage0
+            (, tick) = _priceAndTick();
+            sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
+
+            price = FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+
+            (bal0, bal1) = getTotalAmounts();
+            totalLiq = FullMath.mulDiv(bal0, price, PRECISION) + bal1;
+            percentage0 = getRangePercentage(FullMath.mulDiv(totalLiq, PRECISION, price), totalLiq);
+
+            uint256 amountToSwapToToken0 = FullMath.mulDiv(depositAmount, percentage0, PRECISION);
+            {
+                uint256 token0Price = FullMath.mulDiv(token1Price, price, PRECISION);
+
+                // Swap USDT to token0
+                _swapUsingPool(
+                    _pool0,
+                    amountToSwapToToken0,
+                    _getAmountMin(amountToSwapToToken0, token0Price, false),
+                    !_pool0Direction, // USDT to token0
+                    _pool0Direction
+                );
+            }
+            uint256 amountToSwapToToken1 = depositAmount - amountToSwapToToken0;
+
+            // Swap USDT to token1
             _swapUsingPool(
-                _pool,
-                amount1ToSwap,
-                _getAmountMin(amount1ToSwap, price, true),
-                false, // token1 to token0
-                true
+                _pool1,
+                amountToSwapToToken1,
+                _getAmountMin(amountToSwapToToken1, token1Price, false),
+                !_pool1Direction, // USDT to token1
+                _pool1Direction
             );
 
             _addLiquidity();
