@@ -276,6 +276,9 @@ export default async function suite(): Promise<void> {
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
 
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
+            expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
             expect(user2NewBalance).to.be.eq(0);
@@ -1051,6 +1054,9 @@ export default async function suite(): Promise<void> {
             const expectedShares = amount.mul(bnbChainLinkPrice);
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.02"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
@@ -1835,6 +1841,9 @@ export default async function suite(): Promise<void> {
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
 
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 40);
+
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
             expect(user2NewBalance).to.be.eq(0);
@@ -2617,6 +2626,9 @@ export default async function suite(): Promise<void> {
             const expectedShares = amount.mul(bnbChainLinkPrice);
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
+
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
@@ -3407,6 +3419,9 @@ export default async function suite(): Promise<void> {
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
 
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
+            expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
             expect(user2NewBalance).to.be.eq(0);
@@ -4192,6 +4207,9 @@ export default async function suite(): Promise<void> {
             const expectedShares = amount.mul(bnbChainLinkPrice);
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
+
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, ethers.utils.parseEther("0.01"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
