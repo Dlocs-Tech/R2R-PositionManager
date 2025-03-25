@@ -17,11 +17,11 @@ import {FeeManagement} from "./FeeManagement.sol";
 
 /**
  * @title PositionManager
- * @dev Contract that let users join or leave a position strategy in PancakeSwap managed by a manager
+ * @dev Contract that allows users to deposit and withdraw from a position strategy in PancakeSwap managed by a manager
  *      NOTE: Users deposit USDT and receive shares in return
  *            Users withdraw shares and receive USDT or Token0 and Token1 in return
  *
- *            The operator can make the contract open or close a position with the funds deposited by the users
+ *            The operator can make the contract open, close and update a position with the funds deposited by the users
  */
 contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl, ReentrancyGuard, ERC20 {
     using SafeERC20 for IERC20;
@@ -242,7 +242,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
                 _swapUsingPool(
                     _pool,
                     amount0ToSwap,
-                    _getAmountMin(amount0ToSwap, token1Price, false),
+                    _getAmountMin(amount0ToSwap, price * 10 ** 8, true),
                     true, // token0 to token1
                     false
                 );
@@ -253,7 +253,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
                 _swapUsingPool(
                     _pool,
                     amount1ToSwap,
-                    _getAmountMin(amount1ToSwap, price, true),
+                    _getAmountMin(amount1ToSwap, price * 10 ** 8, false),
                     false, // token1 to token0
                     true
                 );
@@ -480,15 +480,13 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         uint256 currentPercentage0 = PRECISION - FullMath.mulDiv(bal1, PRECISION, totalLiq);
 
         if (currentPercentage0 > percentage0) {
-            uint256 token1Price = _getChainlinkPrice() * PRECISION;
-
             uint256 totalLiq0 = bal0 + FullMath.mulDiv(bal1, PRECISION, price);
             uint256 amount0ToSwap = bal0 - FullMath.mulDiv(totalLiq0, percentage0, PRECISION);
 
             _swapUsingPool(
                 _pool,
                 amount0ToSwap,
-                _getAmountMin(amount0ToSwap, token1Price, false),
+                _getAmountMin(amount0ToSwap, price * 10 ** 8, true),
                 true, // token0 to token1
                 false
             );
@@ -499,7 +497,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             _swapUsingPool(
                 _pool,
                 amount1ToSwap,
-                _getAmountMin(amount1ToSwap, price, true),
+                _getAmountMin(amount1ToSwap, price * 10 ** 8, false),
                 false, // token1 to token0
                 true
             );
@@ -508,7 +506,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         _addLiquidity();
     }
 
-    function reAddLiquidity() external onlyRole(MANAGER_ROLE) {
+    function reAddLiquidity() external {
         // Only re add liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidEntry();
         if (totalSupply() == 0) revert InvalidInput(); // Shouldn't happen
@@ -528,15 +526,13 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         uint256 currentPercentage0 = PRECISION - FullMath.mulDiv(bal1, PRECISION, totalLiq);
 
         if (currentPercentage0 > percentage0) {
-            uint256 token1Price = _getChainlinkPrice() * PRECISION;
-
             uint256 totalLiq0 = bal0 + FullMath.mulDiv(bal1, PRECISION, price);
             uint256 amount0ToSwap = bal0 - FullMath.mulDiv(totalLiq0, percentage0, PRECISION);
 
             _swapUsingPool(
                 _pool,
                 amount0ToSwap,
-                _getAmountMin(amount0ToSwap, token1Price, false),
+                _getAmountMin(amount0ToSwap, price * 10 ** 8, true),
                 true, // token0 to token1
                 false
             );
@@ -547,7 +543,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             _swapUsingPool(
                 _pool,
                 amount1ToSwap,
-                _getAmountMin(amount1ToSwap, price, true),
+                _getAmountMin(amount1ToSwap, price * 10 ** 8, false),
                 false, // token1 to token0
                 true
             );
