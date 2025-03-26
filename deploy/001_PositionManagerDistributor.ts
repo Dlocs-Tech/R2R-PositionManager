@@ -56,16 +56,13 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
           address: PositionManagerAddress,
           contract: 'contracts/PositionManager.sol:PositionManager',
           constructorArguments: [
-            InitValues.swapRouter,
-            InitValues.usdtToToken0Path,
-            InitValues.usdtToToken1Path,
-            InitValues.token0ToUsdtPath,
-            InitValues.token1ToUsdtPath,
-            contractAddresses.USDT,
-            InitValues.dataFeed,
-            InitValues.pool,
+            InitValues.dataFeedAddress,
+            InitValues.poolAddress,
+            InitValues.pool0Address,
+            InitValues.pool1Address,
+            contractAddresses["USDT"],
             InitValues.receiverAddress,
-            InitValues.receiverPercentage,
+            InitValues.receiverFeePercentage,
           ],
         });
     } catch (error) {}
