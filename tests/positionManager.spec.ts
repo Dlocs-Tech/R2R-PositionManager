@@ -18,7 +18,7 @@ export default async function suite(): Promise<void> {
     let user2: SignerWithAddress;
     let user3: SignerWithAddress;
     let user4: SignerWithAddress;
-    let FundsDistributor: SignerWithAddress;
+    let receiver: SignerWithAddress;
 
     let USDTAddress = contractAddresses.USDT;
     let WBNBAddress = contractAddresses.WBNB;
@@ -45,13 +45,13 @@ export default async function suite(): Promise<void> {
 
             PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor_6");
 
-            [deployer, manager, user1, user2, user3, user4, FundsDistributor] = await ethers.getSigners();
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
 
             const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setFundsDistributor(FundsDistributor.address, percentages.FundsDistributorPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             USDCContract = (await ethers.getContractAt("IERC20", USDCAddress)) as IERC20;
@@ -661,16 +661,16 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
-        it("should distribute to the fundsDistributor (zero users)", async function () {
+        it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -690,17 +690,17 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
-            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedFundsDistributorBalance));
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
         });
 
         it("revert: an user cannot collect rewards if the contract has no balance", async function () {
@@ -724,9 +724,9 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const expectedUser1USDTBalance = amount.sub(expectedFundsDistributorBalance);
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
 
             expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
 
@@ -734,10 +734,10 @@ export default async function suite(): Promise<void> {
 
             expect(user1ContractUSDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -783,29 +783,29 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            const expectedFundsDistributorBalance = totalAmount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
-            const expectedFundsDistributorBalanceUser1 = amount1.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser2 = amount2.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser3 = amount3.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser4 = amount4.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
             const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
-            const expectedUser1USDTBalance = amount1.sub(expectedFundsDistributorBalanceUser1);
-            const expectedUser2USDTBalance = amount2.sub(expectedFundsDistributorBalanceUser2);
-            const expectedUser3USDTBalance = amount3.sub(expectedFundsDistributorBalanceUser3);
-            const expectedUser4USDTBalance = amount4.sub(expectedFundsDistributorBalanceUser4);
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -825,13 +825,13 @@ export default async function suite(): Promise<void> {
 
             PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor");
 
-            [deployer, manager, user1, user2, user3, user4, FundsDistributor] = await ethers.getSigners();
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
 
             const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setFundsDistributor(FundsDistributor.address, percentages.FundsDistributorPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -1440,16 +1440,16 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
-        it("should distribute to the fundsDistributor (zero users)", async function () {
+        it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -1469,17 +1469,17 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
-            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedFundsDistributorBalance));
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
         });
 
         it("revert: an user cannot collect rewards if the contract has no balance", async function () {
@@ -1503,9 +1503,9 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const expectedUser1USDTBalance = amount.sub(expectedFundsDistributorBalance);
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
 
             expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
 
@@ -1513,10 +1513,10 @@ export default async function suite(): Promise<void> {
 
             expect(user1ContractUSDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -1562,29 +1562,29 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            const expectedFundsDistributorBalance = totalAmount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
-            const expectedFundsDistributorBalanceUser1 = amount1.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser2 = amount2.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser3 = amount3.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser4 = amount4.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
             const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
-            const expectedUser1USDTBalance = amount1.sub(expectedFundsDistributorBalanceUser1);
-            const expectedUser2USDTBalance = amount2.sub(expectedFundsDistributorBalanceUser2);
-            const expectedUser3USDTBalance = amount3.sub(expectedFundsDistributorBalanceUser3);
-            const expectedUser4USDTBalance = amount4.sub(expectedFundsDistributorBalanceUser4);
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -1610,13 +1610,13 @@ export default async function suite(): Promise<void> {
 
             PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor_2");
 
-            [deployer, manager, user1, user2, user3, user4, FundsDistributor] = await ethers.getSigners();
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
 
             const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setFundsDistributor(FundsDistributor.address, percentages.FundsDistributorPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             ETHContract = (await ethers.getContractAt("IERC20", ETHAddress)) as IERC20;
@@ -2226,16 +2226,16 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
-        it("should distribute to the fundsDistributor (zero users)", async function () {
+        it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -2255,17 +2255,17 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
-            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedFundsDistributorBalance));
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
         });
 
         it("revert: an user cannot collect rewards if the contract has no balance", async function () {
@@ -2289,9 +2289,9 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const expectedUser1USDTBalance = amount.sub(expectedFundsDistributorBalance);
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
 
             expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
 
@@ -2299,10 +2299,10 @@ export default async function suite(): Promise<void> {
 
             expect(user1ContractUSDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -2348,29 +2348,29 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            const expectedFundsDistributorBalance = totalAmount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
-            const expectedFundsDistributorBalanceUser1 = amount1.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser2 = amount2.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser3 = amount3.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser4 = amount4.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
             const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
-            const expectedUser1USDTBalance = amount1.sub(expectedFundsDistributorBalanceUser1);
-            const expectedUser2USDTBalance = amount2.sub(expectedFundsDistributorBalanceUser2);
-            const expectedUser3USDTBalance = amount3.sub(expectedFundsDistributorBalanceUser3);
-            const expectedUser4USDTBalance = amount4.sub(expectedFundsDistributorBalanceUser4);
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -2396,13 +2396,13 @@ export default async function suite(): Promise<void> {
 
             PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor_3");
 
-            [deployer, manager, user1, user2, user3, user4, FundsDistributor] = await ethers.getSigners();
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
 
             const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setFundsDistributor(FundsDistributor.address, percentages.FundsDistributorPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -3018,16 +3018,16 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
-        it("should distribute to the fundsDistributor (zero users)", async function () {
+        it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -3047,17 +3047,17 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
-            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedFundsDistributorBalance));
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
         });
 
         it("revert: an user cannot collect rewards if the contract has no balance", async function () {
@@ -3081,9 +3081,9 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const expectedUser1USDTBalance = amount.sub(expectedFundsDistributorBalance);
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
 
             expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
 
@@ -3091,10 +3091,10 @@ export default async function suite(): Promise<void> {
 
             expect(user1ContractUSDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -3140,29 +3140,29 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            const expectedFundsDistributorBalance = totalAmount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
-            const expectedFundsDistributorBalanceUser1 = amount1.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser2 = amount2.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser3 = amount3.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser4 = amount4.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
             const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
-            const expectedUser1USDTBalance = amount1.sub(expectedFundsDistributorBalanceUser1);
-            const expectedUser2USDTBalance = amount2.sub(expectedFundsDistributorBalanceUser2);
-            const expectedUser3USDTBalance = amount3.sub(expectedFundsDistributorBalanceUser3);
-            const expectedUser4USDTBalance = amount4.sub(expectedFundsDistributorBalanceUser4);
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -3188,13 +3188,13 @@ export default async function suite(): Promise<void> {
 
             PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor_4");
 
-            [deployer, manager, user1, user2, user3, user4, FundsDistributor] = await ethers.getSigners();
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
 
             const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setFundsDistributor(FundsDistributor.address, percentages.FundsDistributorPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             BTCBContract = (await ethers.getContractAt("IERC20", BTCBAddress)) as IERC20;
@@ -3807,16 +3807,16 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
-        it("should distribute to the fundsDistributor (zero users)", async function () {
+        it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -3836,17 +3836,17 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
-            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedFundsDistributorBalance));
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
         });
 
         it("revert: an user cannot collect rewards if the contract has no balance", async function () {
@@ -3870,9 +3870,9 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const expectedUser1USDTBalance = amount.sub(expectedFundsDistributorBalance);
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
 
             expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
 
@@ -3880,10 +3880,10 @@ export default async function suite(): Promise<void> {
 
             expect(user1ContractUSDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -3929,29 +3929,29 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            const expectedFundsDistributorBalance = totalAmount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
-            const expectedFundsDistributorBalanceUser1 = amount1.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser2 = amount2.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser3 = amount3.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser4 = amount4.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
             const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
-            const expectedUser1USDTBalance = amount1.sub(expectedFundsDistributorBalanceUser1);
-            const expectedUser2USDTBalance = amount2.sub(expectedFundsDistributorBalanceUser2);
-            const expectedUser3USDTBalance = amount3.sub(expectedFundsDistributorBalanceUser3);
-            const expectedUser4USDTBalance = amount4.sub(expectedFundsDistributorBalanceUser4);
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -3977,13 +3977,13 @@ export default async function suite(): Promise<void> {
 
             PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor_5");
 
-            [deployer, manager, user1, user2, user3, user4, FundsDistributor] = await ethers.getSigners();
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
 
             const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setFundsDistributor(FundsDistributor.address, percentages.FundsDistributorPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -4599,16 +4599,16 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
-        it("should distribute to the fundsDistributor (zero users)", async function () {
+        it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
             await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
         });
 
         it("an user deposits and distributeRewards is called", async function () {
@@ -4628,17 +4628,17 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
-            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedFundsDistributorBalance));
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
         });
 
         it("revert: an user cannot collect rewards if the contract has no balance", async function () {
@@ -4662,9 +4662,9 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            const expectedFundsDistributorBalance = amount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const expectedUser1USDTBalance = amount.sub(expectedFundsDistributorBalance);
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
 
             expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
 
@@ -4672,10 +4672,10 @@ export default async function suite(): Promise<void> {
 
             expect(user1ContractUSDTBalance).to.be.eq(0);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.001")
             );
 
@@ -4721,29 +4721,29 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            const expectedFundsDistributorBalance = totalAmount.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            const FundsDistributorBalance = await WBNBContract.balanceOf(FundsDistributor.address);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(FundsDistributorBalance).to.be.closeTo(
-                expectedFundsDistributorBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
+            expect(receiverBalance).to.be.closeTo(
+                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
                 ethers.utils.parseEther("0.01")
             );
 
-            const expectedFundsDistributorBalanceUser1 = amount1.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser2 = amount2.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser3 = amount3.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
-            const expectedFundsDistributorBalanceUser4 = amount4.mul(percentages.FundsDistributorPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
             const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
-            const expectedUser1USDTBalance = amount1.sub(expectedFundsDistributorBalanceUser1);
-            const expectedUser2USDTBalance = amount2.sub(expectedFundsDistributorBalanceUser2);
-            const expectedUser3USDTBalance = amount3.sub(expectedFundsDistributorBalanceUser3);
-            const expectedUser4USDTBalance = amount4.sub(expectedFundsDistributorBalanceUser4);
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
