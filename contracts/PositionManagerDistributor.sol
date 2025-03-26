@@ -16,7 +16,7 @@ import {PositionManager} from "./PositionManager.sol";
 /**
  * @title PositionManagerDistributor
  * @notice Distributes the rewards of the PositionManager contract
- * @dev The rewards are distributed to the users and the FundsDistributor
+ * @dev The rewards are distributed to the users and a specified receiver address
  */
 contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3SwapCallback, Ownable {
     using SafeERC20 for IERC20;
@@ -24,6 +24,9 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
 
     /// @notice Maximum percentage value with 4 decimals
     uint256 public constant MAX_PERCENTAGE = 1_000_000;
+    
+    /// @notice Default admin role
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
     /// @dev Error thrown when the caller is not the PositionManager contract
     error WrongCaller();
@@ -44,21 +47,28 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
     event RewardsDistributed(uint256 amount);
 
     /**
+     * @notice Event emitted when the user collects the rewards
+     * @param user Address of the user
+     * @param amount Amount of USDT collected
+     */
+    event RewardCollected(address indexed user, uint256 amount);
+
+    /**
      * @dev Parameters to create the PositionManager contract
      * @param dataFeedAddress Address of the data feed used to get the token1 price in USD
      * @param poolAddress Address of the main PancakeSwap V3 pool
      * @param pool0Address Address of the pool to swap USDT to token0
      * @param pool1Address Address of the pool to swap USDT to token1
-     * @param fundsDistributorAddress Address of the funds distributor contract
-     * @param fundsDistributorFeePercentage Percentage of the funds destined to the funds distributor
+     * @param receiverAddress Address of the receiver of the fees
+     * @param receiverFeePercentage Percentage of the funds destined to the receiver
      */
     struct CreatePositionManagerParams {
         address dataFeedAddress;
         address poolAddress;
         address pool0Address;
         address pool1Address;
-        address fundsDistributorAddress;
-        uint256 fundsDistributorFeePercentage;
+        address receiverAddress;
+        uint256 receiverFeePercentage;
     }
 
     /// @notice Pool of USDT/WNative
@@ -101,12 +111,12 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
             params.pool0Address,
             params.pool1Address,
             address(usdt),
-            params.fundsDistributorAddress,
-            params.fundsDistributorFeePercentage
+            params.receiverAddress,
+            params.receiverFeePercentage
         );
 
-        sharesContract.grantRole(0x00, msg.sender);
-        sharesContract.revokeRole(0x00, address(this));
+        sharesContract.grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        sharesContract.revokeRole(DEFAULT_ADMIN_ROLE, address(this));
     }
 
     /**
@@ -116,24 +126,24 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
     function deposit(uint256 depositAmount) external returns (uint256 shares) {
         _usersSet.add(msg.sender);
 
-        return sharesContract.deposit(depositAmount, msg.sender);
+        return sharesContract.deposit(depositAmount, msg.sender); // Already emits Deposit event
     }
 
     /// @notice Withdraw Funds from the positionManager
     function withdraw() external {
-        sharesContract.withdraw(msg.sender);
+        sharesContract.withdraw(msg.sender); // Already emits Withdraw event
 
         _usersSet.remove(msg.sender);
     }
 
     /**
      * @notice Distribute the rewards accumulated by the PositionManager contract
-     * @param fundsDistributor Address of the funds distributor
-     * @param fundsDistributorPercentage Percentage of the funds destined to the funds distributor
+     * @param receiverAddress Address of the receiver
+     * @param receiverPercentage Percentage of the funds destined to the receiver
      * @param amountOutMin Minimum amount of wnative to receive
      * @dev Only the PositionManager contract can call this function
      */
-    function distributeRewards(address fundsDistributor, uint256 fundsDistributorPercentage, uint256 amountOutMin) external {
+    function distributeRewards(address receiverAddress, uint256 receiverPercentage, uint256 amountOutMin) external {
         if (msg.sender != address(sharesContract)) revert WrongCaller();
 
         uint256 contractBalance = usdt.balanceOf(address(this));
@@ -145,18 +155,18 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
         uint256 totalShares = sharesContract.totalSupply();
 
         if (totalShares == 0) {
-            _swapUsdtAndTransfer(amountToDistribute, amountOutMin, fundsDistributor);
+            _swapUsdtAndTransfer(amountToDistribute, amountOutMin, receiverAddress);
 
             emit RewardsDistributed(amountToDistribute);
             return;
         }
 
-        // Send fundsDistributorPercentage of the tokens to fundsDistributor
-        uint256 fundsDistributorAmount = FullMath.mulDiv(amountToDistribute, fundsDistributorPercentage, MAX_PERCENTAGE);
+        // Send receiverPercentage of the tokens to receiver
+        uint256 receiverAmount = FullMath.mulDiv(amountToDistribute, receiverPercentage, MAX_PERCENTAGE);
 
-        _swapUsdtAndTransfer(fundsDistributorAmount, amountOutMin, fundsDistributor);
+        _swapUsdtAndTransfer(receiverAmount, amountOutMin, receiverAddress);
 
-        amountToDistribute -= fundsDistributorAmount;
+        amountToDistribute -= receiverAmount;
 
         uint256 usersLength = _usersSet.length();
 
@@ -176,10 +186,13 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
             _balances[user] += userUsdt;
         }
 
-        emit RewardsDistributed(amountToDistribute + fundsDistributorAmount);
+        emit RewardsDistributed(amountToDistribute + receiverAmount);
     }
 
-    /// @notice Collect the rewards of the user
+    /**
+     * @notice Collect rewards for the caller
+     * @dev User must have a balance greater than 0
+     */
     function collectRewards() external {
         uint256 rewards = _balances[msg.sender];
 
@@ -190,6 +203,8 @@ contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3Sw
         usersTotalBalances -= rewards;
 
         usdt.safeTransfer(msg.sender, rewards);
+
+        emit RewardCollected(msg.sender, rewards);
     }
 
     /**

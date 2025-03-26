@@ -32,7 +32,7 @@ export const contractAddresses: any = {
     Pool_USDT_USDC: "0x92b7807bF19b7DDdf89b706143896d05228f3121",
     Pool_XRP_USDT: "0x71f5a8F7d448E59B1ede00A19fE59e05d125E742",
 
-    DefaultFundsDistributor: "0xDCE30F31ccf1F19C314b8E41586FfdE58aED96D6",
+    DefaultReceiverAddress: "0xDCE30F31ccf1F19C314b8E41586FfdE58aED96D6",
 
     R2RWallet : "0x2F764e19d71904EE6dD89Df47117Dcdf6dbB8d82",
     Admin: "0x43c12678434DBEcE2C013008810dDf3a561C0cef",
@@ -40,7 +40,7 @@ export const contractAddresses: any = {
 };
 
 export const percentages: any = {
-    FundsDistributorPercentage: 300000, // 30%
+    ReceiverPercentage: 300000, // 30%
 };
 
 export const initValues_PositionManagerDistributor: any = {
@@ -49,47 +49,47 @@ export const initValues_PositionManagerDistributor: any = {
         poolAddress: contractAddresses["Pool_USDT_WBNB"],
         pool0Address: ethers.constants.AddressZero,
         pool1Address: contractAddresses["Pool_USDT_WBNB"],
-        fundsDistributorAddress: contractAddresses["DefaultFundsDistributor"],
-        fundsDistributorFeePercentage: percentages["FundsDistributorPercentage"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
     ETH_USDT: {
         dataFeedAddress: contractAddresses["ChainLink_USDT_USD"],
         poolAddress: contractAddresses["Pool_ETH_USDT"],
         pool0Address: contractAddresses["Pool_ETH_USDT"],
         pool1Address: ethers.constants.AddressZero,
-        fundsDistributorAddress: contractAddresses["DefaultFundsDistributor"],
-        fundsDistributorFeePercentage: percentages["FundsDistributorPercentage"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
     ETH_WBNB: {
         dataFeedAddress: contractAddresses["ChainLink_WBNB_USD"],
         poolAddress: contractAddresses["Pool_ETH_WBNB"],
         pool0Address: contractAddresses["Pool_ETH_USDT"],
         pool1Address: contractAddresses["Pool_USDT_WBNB"],
-        fundsDistributorAddress: contractAddresses["DefaultFundsDistributor"],
-        fundsDistributorFeePercentage: percentages["FundsDistributorPercentage"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
     USDT_BTCB: {
         dataFeedAddress: contractAddresses["ChainLink_BTCB_USD"],
         poolAddress: contractAddresses["Pool_USDT_BTCB"],
         pool0Address: ethers.constants.AddressZero,
         pool1Address: contractAddresses["Pool_USDT_BTCB"],
-        fundsDistributorAddress: contractAddresses["DefaultFundsDistributor"],
-        fundsDistributorFeePercentage: percentages["FundsDistributorPercentage"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
     XRP_WBNB: {
         dataFeedAddress: contractAddresses["ChainLink_WBNB_USD"],
         poolAddress: contractAddresses["Pool_XRP_WBNB"],
         pool0Address: contractAddresses["Pool_XRP_USDT"],
         pool1Address: contractAddresses["Pool_USDT_WBNB"],
-        fundsDistributorAddress: contractAddresses["DefaultFundsDistributor"],
-        fundsDistributorFeePercentage: percentages["FundsDistributorPercentage"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
     USDT_USDC: {
         dataFeedAddress: contractAddresses["ChainLink_USDC_USD"],
         poolAddress: contractAddresses["Pool_USDT_USDC"],
         pool0Address: ethers.constants.AddressZero,
         pool1Address: contractAddresses["Pool_USDT_USDC"],
-        fundsDistributorAddress: contractAddresses["DefaultFundsDistributor"],
-        fundsDistributorFeePercentage: percentages["FundsDistributorPercentage"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
 };

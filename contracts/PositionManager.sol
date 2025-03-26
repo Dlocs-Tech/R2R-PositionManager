@@ -29,6 +29,15 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     /// @notice Precision used in the contract
     uint256 public constant PRECISION = 1e36;
 
+    /// @dev Precision used in Chainlink price
+    uint256 private constant CHAINLINK_PRECISION = 1e8;
+
+    /// @dev Maximum value for uint128
+    uint128 private constant MAX_UINT128 = type(uint128).max;
+
+    /// @dev Time interval to check the Chainlink price
+    uint256 private constant TWENTY_MINUTES = 20 minutes;
+
     /// @notice Manager role
     bytes32 public constant MANAGER_ROLE = keccak256("Position_Manager_Role");
 
@@ -75,17 +84,17 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
     /**
      * @notice Event emitted when the position is updated
-     * @param tickLower Lower tick of the position
-     * @param tickUpper Upper tick of the position
+     * @param tickLower New lower tick of the position
+     * @param tickUpper New upper tick of the position
      */
     event PositionUpdated(int24 tickLower, int24 tickUpper);
 
     /**
-     * @notice Event emitted when the funds distributor address and fee percentage are updated
-     * @param fundsDistributorAddress Address of the funds distributor contract
-     * @param fundsDistributorFeePercentage Percentage of the funds destined to the funds distributor
+     * @notice Event emitted when the receiver address and fee percentage are updated
+     * @param receiverAddress Address of the receiver
+     * @param receiverFeePercentage Percentage of the funds destined to the receiver
      */
-    event FundsDistributorUpdated(address indexed fundsDistributorAddress, uint256 fundsDistributorFeePercentage);
+    event ReceiverDataUpdated(address indexed receiverAddress, uint256 receiverFeePercentage);
 
     /**
      * @notice Event emitted when the slippage is updated
@@ -126,11 +135,11 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     /// @dev Token1 of the pool
     IERC20 internal immutable _token1;
 
-    /// @notice Address of the funds distributor contract
-    address public fundsDistributor;
+    /// @notice Address of the receiver of the fees
+    address public receiverAddress;
 
-    /// @notice Percentage of the funds destined to the funds distributor
-    uint256 public fundsDistributorPercentage;
+    /// @notice Percentage of the funds destined to the receiver
+    uint256 public receiverPercentage;
 
     /// @dev Max slippage percentage allowed in swaps with 4 decimals
     uint256 internal _slippage = 10_000; // 1%
@@ -160,8 +169,8 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
      * @param pool0Address Address of the pool to swap USDT to token0 (zero if token0 is already USDT)
      * @param pool1Address Address of the pool to swap USDT to token1 (zero if token1 is already USDT)
      * @param usdtAddress Address of the USDT token
-     * @param fundsDistributorAddress Address of the funds distributor contract
-     * @param fundsDistributorFeePercentage Percentage of the funds destined to the funds distributor
+     * @param receiverAddress_ Address of the receiver of the fees
+     * @param receiverFeePercentage_ Percentage of the funds destined to the receiver
      */
     constructor(
         address dataFeedAddress,
@@ -169,16 +178,16 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         address pool0Address,
         address pool1Address,
         address usdtAddress,
-        address fundsDistributorAddress,
-        uint256 fundsDistributorFeePercentage
+        address receiverAddress_,
+        uint256 receiverFeePercentage_
     ) ERC20("PositionManager", "PM") {
         if (
             dataFeedAddress == address(0) ||
             poolAddress == address(0) ||
             usdtAddress == address(0) ||
-            fundsDistributorAddress == address(0) ||
-            fundsDistributorFeePercentage > MAX_PERCENTAGE ||
-            fundsDistributorFeePercentage == 0
+            receiverAddress_ == address(0) ||
+            receiverFeePercentage_ > MAX_PERCENTAGE ||
+            receiverFeePercentage_ == 0
         ) revert InvalidInput();
 
         _dataFeed = AggregatorV3Interface(dataFeedAddress);
@@ -193,9 +202,9 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         usdt = IERC20(usdtAddress);
 
-        fundsDistributor = fundsDistributorAddress;
+        receiverAddress = receiverAddress_;
 
-        fundsDistributorPercentage = fundsDistributorFeePercentage;
+        receiverPercentage = receiverFeePercentage_;
 
         _factory = msg.sender;
 
@@ -239,7 +248,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
             uint256 contractLiqInToken1 = FullMath.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
-            uint256 userLiqInToken1 = FullMath.mulDiv(depositAmount, (PRECISION) * 10 ** 8, token1Price);
+            uint256 userLiqInToken1 = FullMath.mulDiv(depositAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
 
             // Calculate shares to mint (totalSupply cannot be 0 if the contract is in position)
             shares = FullMath.mulDiv(userLiqInToken1, totalSupply(), contractLiqInToken1);
@@ -338,9 +347,8 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
      * @dev Only the manager can call this function
      */
     function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
-        // Only add liquidity if the contract is not in position and there are funds in the contract
+        // Only add liquidity if the contract is not in position
         if (_tickLower != _tickUpper) revert InvalidEntry();
-        if (totalSupply() == 0) revert InvalidInput(); // Shouldn't happen
 
         if (tickLower > tickUpper) revert InvalidInput();
 
@@ -358,7 +366,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
 
         uint256 poolPrice = _getPoolTokensPrice();
 
-        uint256 contractLiqInToken1 = FullMath.mulDiv(usdtAmount, (PRECISION) * 10 ** 8, token1Price);
+        uint256 contractLiqInToken1 = FullMath.mulDiv(usdtAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
         uint256 contractLiqInToken0 = FullMath.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
 
         // Calculate the percentage of token0 in the pool to know how much to swap
@@ -378,7 +386,6 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     function removeLiquidity() external onlyRole(MANAGER_ROLE) {
         // Only remove liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidInput();
-        if (totalSupply() == 0) revert InvalidInput(); // Shouldn't happen
 
         // Harvest to collect fees
         _harvest();
@@ -455,7 +462,6 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     function reAddLiquidity() external {
         // Only re add liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidEntry();
-        if (totalSupply() == 0) revert InvalidInput(); // Shouldn't happen
 
         // Harvest to collect fees
         _harvest();
@@ -472,12 +478,12 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     /**
-     * @notice Function to distribute rewards calling the funds distributor
+     * @notice Function to distribute rewards calling the factory contract
      * @param amountOutMin Minimum amount out for the swap
      * @dev Only the manager can call this function
      */
     function distributeRewards(uint256 amountOutMin) external onlyRole(MANAGER_ROLE) {
-        IPositionManagerDistributor(_factory).distributeRewards(fundsDistributor, fundsDistributorPercentage, amountOutMin);
+        IPositionManagerDistributor(_factory).distributeRewards(receiverAddress, receiverPercentage, amountOutMin);
     }
 
     /**
@@ -510,22 +516,23 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     /**
-     * @notice Function to set the funds distributor address and fee percentage
-     * @param fundsDistributorAddress Address of the funds distributor contract
-     * @param fundsDistributorFeePercentage Percentage of the funds destined to the funds distributor
+     * @notice Function to set the receiver address and fee percentage
+     * @param receiverAddress_ Address of the receiver
+     * @param receiverFeePercentage_ Percentage of the funds destined to the receiver
      */
-    function setFundsDistributor(address fundsDistributorAddress, uint256 fundsDistributorFeePercentage) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (fundsDistributorFeePercentage > MAX_PERCENTAGE || fundsDistributorFeePercentage == 0 || fundsDistributorAddress == address(0))
+    function setReceiverData(address receiverAddress_, uint256 receiverFeePercentage_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (receiverFeePercentage_ > MAX_PERCENTAGE || receiverFeePercentage_ == 0 || receiverAddress_ == address(0))
             revert InvalidInput();
 
-        fundsDistributor = fundsDistributorAddress;
-        fundsDistributorPercentage = fundsDistributorFeePercentage;
+        receiverAddress = receiverAddress_;
+        receiverPercentage = receiverFeePercentage_;
 
-        emit FundsDistributorUpdated(fundsDistributorAddress, fundsDistributorFeePercentage);
+        emit ReceiverDataUpdated(receiverAddress_, receiverFeePercentage_);
     }
 
     function setSlippage(uint256 slippage) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (slippage > MAX_PERCENTAGE) revert InvalidInput();
+
         _slippage = slippage;
 
         emit SlippageUpdated(slippage);
@@ -596,7 +603,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             _swapUsingPool(
                 _pool,
                 amount0ToSwap,
-                _getAmountMin(amount0ToSwap, poolPrice * 10 ** 8, true), // poolPrice is adjusted to have same precision as chainlink price
+                _getAmountMin(amount0ToSwap, poolPrice * CHAINLINK_PRECISION, true), // poolPrice is adjusted to have same precision as chainlink price
                 true, // token0 to token1
                 false
             );
@@ -607,7 +614,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             _swapUsingPool(
                 _pool,
                 amount1ToSwap,
-                _getAmountMin(amount1ToSwap, poolPrice * 10 ** 8, false), // poolPrice is adjusted to have same precision as chainlink price
+                _getAmountMin(amount1ToSwap, poolPrice * CHAINLINK_PRECISION, false), // poolPrice is adjusted to have same precision as chainlink price
                 false, // token1 to token0
                 true
             );
@@ -680,7 +687,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         if (liquidity > 0) _pool.burn(_tickLower, _tickUpper, 0);
 
         // the actual amounts collected are returned
-        _pool.collect(address(this), _tickLower, _tickUpper, type(uint128).max, type(uint128).max);
+        _pool.collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
     }
 
     function _getPoolTokensPrice() internal view returns (uint256) {
@@ -705,8 +712,8 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         uint256 amountOutMin;
 
         if (fromToken)
-            amountOutMin = FullMath.mulDiv(amount, price, PRECISION) / 10 ** 8; // 10**8 is the precision of the chainlink price
-        else amountOutMin = FullMath.mulDiv(amount, (PRECISION) * 10 ** 8, price); // 10**8 is the precision of the chainlink price
+            amountOutMin = FullMath.mulDiv(amount, price, PRECISION) / CHAINLINK_PRECISION; // 10**8 is the precision of the chainlink price
+        else amountOutMin = FullMath.mulDiv(amount, (PRECISION) * CHAINLINK_PRECISION, price); // 10**8 is the precision of the chainlink price
 
         // amountOutMin with slippage applied
         return FullMath.mulDiv(amountOutMin, MAX_PERCENTAGE - _slippage, MAX_PERCENTAGE);
@@ -715,7 +722,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     function _getChainlinkPrice() internal view returns (uint256) {
         (, int256 price, , uint256 updatedAt, ) = _dataFeed.latestRoundData();
 
-        if (price <= 0 || block.timestamp - 20 minutes > updatedAt) revert InvalidInput();
+        if (price <= 0 || block.timestamp - TWENTY_MINUTES > updatedAt) revert InvalidInput();
 
         return uint256(price);
     }
@@ -763,7 +770,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     function _uint128Safe(uint256 x) internal pure returns (uint128) {
-        assert(x <= type(uint128).max);
+        assert(x <= MAX_UINT128);
         return uint128(x);
     }
 

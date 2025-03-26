@@ -64,8 +64,8 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
             contractAddresses.USDT,
             InitValues.dataFeed,
             InitValues.pool,
-            InitValues.fundsDistributor,
-            InitValues.fundsDistributorPercentage,
+            InitValues.receiverAddress,
+            InitValues.receiverPercentage,
           ],
         });
     } catch (error) {}
