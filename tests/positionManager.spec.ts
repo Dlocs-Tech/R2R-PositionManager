@@ -402,7 +402,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).removeLiquidity();
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("0.1"));
         });
 
         it("Should deposit 3 times (different users)", async function () {
@@ -693,10 +693,7 @@ export default async function suite(): Promise<void> {
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
@@ -736,10 +733,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
 
@@ -787,10 +781,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.01")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
             const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
             const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
@@ -1181,7 +1172,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).removeLiquidity();
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("0.1"));
         });
 
         it("Should deposit 3 times (different users)", async function () {
@@ -1472,10 +1463,7 @@ export default async function suite(): Promise<void> {
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
@@ -1515,10 +1503,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
 
@@ -1566,10 +1551,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.01")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
             const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
             const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
@@ -1967,7 +1949,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).removeLiquidity();
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("0.5"));
         });
 
         it("Should deposit 3 times (different users)", async function () {
@@ -2258,10 +2240,7 @@ export default async function suite(): Promise<void> {
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
@@ -2301,10 +2280,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
 
@@ -2352,10 +2328,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.01")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
             const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
             const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
@@ -2753,7 +2726,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).removeLiquidity();
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("0.6"));
         });
 
         it("Should deposit 3 times (different users)", async function () {
@@ -3050,10 +3023,7 @@ export default async function suite(): Promise<void> {
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
@@ -3093,10 +3063,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
 
@@ -3144,10 +3111,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.01")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
             const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
             const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
@@ -3545,7 +3509,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).removeLiquidity();
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("0.5"));
         });
 
         it("Should deposit 3 times (different users)", async function () {
@@ -3839,10 +3803,7 @@ export default async function suite(): Promise<void> {
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
@@ -3882,10 +3843,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
 
@@ -3933,10 +3891,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.01")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
             const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
             const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
@@ -4334,7 +4289,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).removeLiquidity();
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("4"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("3"));
         });
 
         it("Should deposit 3 times (different users)", async function () {
@@ -4631,10 +4586,7 @@ export default async function suite(): Promise<void> {
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
 
@@ -4674,10 +4626,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.001")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
             const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
 
@@ -4725,10 +4674,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            expect(receiverBalance).to.be.closeTo(
-                expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt),
-                ethers.utils.parseEther("0.01")
-            );
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
             const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
             const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);

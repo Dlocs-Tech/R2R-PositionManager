@@ -12,6 +12,7 @@ import {FullMath} from "@aperture_finance/uni-v3-lib/src/FullMath.sol";
 import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
 import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
 
+import {IPositionManager} from "./interfaces/IPositionManager.sol";
 import {IPositionManagerDistributor} from "./interfaces/IPositionManagerDistributor.sol";
 import {FeeManagement} from "./FeeManagement.sol";
 
@@ -22,8 +23,10 @@ import {FeeManagement} from "./FeeManagement.sol";
  *            Users withdraw shares and receive USDT or Token0 and Token1 in return
  *
  *            The operator can make the contract open, close and update a position with the funds deposited by the users
+ *
+ *            This contract involves two receivers, the deposit `feeReceiver` from the FeeManagement contract and the rewards `receiverAddress`
  */
-contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl, ReentrancyGuard, ERC20 {
+contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallback, AccessControl, ReentrancyGuard, ERC20 {
     using SafeERC20 for IERC20;
 
     /// @notice Precision used in the contract
@@ -41,99 +44,32 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     /// @notice Manager role
     bytes32 public constant MANAGER_ROLE = keccak256("Position_Manager_Role");
 
-    /// @dev Error thrown when an invalid input is provided
-    error InvalidInput();
-
-    /// @dev Error thrown when user has insufficient shares to withdraw
-    error InsufficientBalance();
-
-    /// @dev Error thrown when the caller is not the valid pool
-    error NotPool();
-
-    /// @dev Error thrown when the balance is not enough
-    error NotEnoughBalance();
-
-    /**
-     * @notice Event emitted when a user deposits USDT and receives shares
-     * @param user Address of the user
-     * @param shares Amount of shares received
-     * @param depositAmount Amount of USDT deposited
-     */
-    event Deposit(address indexed user, uint256 shares, uint256 depositAmount);
-
-    /**
-     * @notice Event emitted when a user withdraws shares and receives funds
-     * @param user Address of the user
-     * @param shares Amount of shares withdrawn
-     */
-    event Withdraw(address indexed user, uint256 shares);
-
-    /**
-     * @notice Event emitted when liquidity is added to the position
-     * @param tickLower Lower tick of the position
-     * @param tickUpper Upper tick of the position
-     */
-    event LiquidityAdded(int24 tickLower, int24 tickUpper);
-
-    /**
-     * @notice Event emitted when liquidity is removed from the position
-     * @param tickLower Lower tick of the position
-     * @param tickUpper Upper tick of the position
-     */
-    event LiquidityRemoved(int24 tickLower, int24 tickUpper);
-
-    /**
-     * @notice Event emitted when the position is updated
-     * @param tickLower New lower tick of the position
-     * @param tickUpper New upper tick of the position
-     */
-    event PositionUpdated(int24 tickLower, int24 tickUpper);
-
-    /**
-     * @notice Event emitted when the receiver address and fee percentage are updated
-     * @param receiverAddress Address of the receiver
-     * @param receiverFeePercentage Percentage of the funds destined to the receiver
-     */
-    event ReceiverDataUpdated(address indexed receiverAddress, uint256 receiverFeePercentage);
-
-    /**
-     * @notice Event emitted when the slippage is updated
-     * @param slippage New slippage value
-     */
-    event SlippageUpdated(uint256 slippage);
-
-    /**
-     * @notice Event emitted when the minimum deposit amount is updated
-     * @param minimumDepositAmount New minimum deposit amount
-     */
-    event MinDepositAmountUpdated(uint256 minimumDepositAmount);
-
     /// @dev Address of the data feed used to get the token1 price in USD
-    AggregatorV3Interface internal immutable _dataFeed;
+    AggregatorV3Interface private immutable _dataFeed;
 
     /// @dev Address of the main PancakeSwap V3 pool (where the position is)
-    IPancakeV3Pool internal immutable _pool;
+    IPancakeV3Pool private immutable _pool;
 
     /// @dev Address of the pool to swap USDT to token0 and vice versa (zero if not necessary)
-    IPancakeV3Pool internal immutable _pool0;
+    IPancakeV3Pool private immutable _pool0;
 
     /// @dev Boolean to indicate if the pool is token0/USDT (true) or USDT/token0 (false)
-    bool internal immutable _pool0Direction;
+    bool private immutable _pool0Direction;
 
     /// @dev Address of the pool to swap USDT to token1 and vice versa (zero if not necessary)
-    IPancakeV3Pool internal immutable _pool1;
+    IPancakeV3Pool private immutable _pool1;
 
     /// @dev Boolean to indicate if the pool is token1/USDT (true) or USDT/token1 (false)
-    bool internal immutable _pool1Direction;
+    bool private immutable _pool1Direction;
 
     /// @dev Factory address
-    address internal immutable _factory;
+    address private immutable _factory;
 
     /// @dev Token0 of the pool
-    IERC20 internal immutable _token0;
+    IERC20 private immutable _token0;
 
     /// @dev Token1 of the pool
-    IERC20 internal immutable _token1;
+    IERC20 private immutable _token1;
 
     /// @notice Address of the receiver of the fees
     address public receiverAddress;
@@ -142,19 +78,19 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     uint256 public receiverPercentage;
 
     /// @dev Max slippage percentage allowed in swaps with 4 decimals
-    uint256 internal _slippage = 10_000; // 1%
+    uint256 private _slippage = 10_000; // 1%
 
     /// @notice Minimum USDT deposit amount
     uint256 public minDepositAmount = 10e18; // 10 USDT
 
     /// @dev Lower tick of the position
-    int24 internal _tickLower;
+    int24 private _tickLower;
 
     /// @dev Upper tick of the position
-    int24 internal _tickUpper;
+    int24 private _tickUpper;
 
     /// @dev Bool switch to prevent reentrancy on the mint callback
-    bool internal _minting;
+    bool private _minting;
 
     /// @dev Modifier to check if the caller is the factory
     modifier onlyFactory() {
@@ -214,12 +150,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         else if (address(_pool1) != address(0) && _pool1.token1() == usdtAddress) _pool1Direction = true;
     }
 
-    /**
-     * @notice Function to deposit USDT and receive shares in return
-     * @param depositAmount Amount of USDT to deposit
-     * @return shares Amount of shares sent to the user
-     * @dev The user must approve the contract to spend the USDT before calling this function
-     */
+    /// @inheritdoc IPositionManager
     function deposit(uint256 depositAmount, address sender) external onlyFactory returns (uint256 shares) {
         if (depositAmount < minDepositAmount) revert InvalidInput();
 
@@ -289,12 +220,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit Deposit(sender, shares, depositAmount);
     }
 
-    /**
-     * @notice Function to withdraw shares and receive funds in return
-     * @dev The user must have shares to withdraw
-     *      NOTE: If the contract is in position, the user will receive token0 and token1
-     *            If the contract is not in position, the user will receive USDT
-     */
+    /// @inheritdoc IPositionManager
     function withdraw(address sender) external onlyFactory nonReentrant {
         uint256 shares = balanceOf(sender);
 
@@ -329,7 +255,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
             // Calculate the contract balance in token1
             uint256 contractAmount = usdt.balanceOf(address(this));
 
-            // Calculate the amount of usdt to send to the user
+            // Calculate the amount of USDT to send to the user
             uint256 userUsdtAmount = FullMath.mulDiv(contractAmount, shares, totalSupply());
 
             usdt.safeTransfer(sender, userUsdtAmount);
@@ -340,12 +266,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit Withdraw(sender, shares);
     }
 
-    /**
-     * @notice Function to add liquidity to the position
-     * @param tickLower Lower tick of the position
-     * @param tickUpper Upper tick of the position
-     * @dev Only the manager can call this function
-     */
+    /// @inheritdoc IPositionManager
     function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
         // Only add liquidity if the contract is not in position
         if (_tickLower != _tickUpper) revert InvalidEntry();
@@ -379,10 +300,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit LiquidityAdded(_tickLower, _tickUpper);
     }
 
-    /**
-     * @notice Function to remove liquidity from the position
-     * @dev Only the manager can call this function
-     */
+    /// @inheritdoc IPositionManager
     function removeLiquidity() external onlyRole(MANAGER_ROLE) {
         // Only remove liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidInput();
@@ -424,12 +342,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit LiquidityRemoved(_tickLower, _tickUpper);
     }
 
-    /**
-     * @notice Function to update the position
-     * @param tickLower Lower tick of the position
-     * @param tickUpper Upper tick of the position
-     * @dev Only the manager can call this function
-     */
+    /// @inheritdoc IPositionManager
     function updatePosition(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
         // Only update position if the contract is in position and new ticks are okay
         if (_tickLower == _tickUpper) revert InvalidEntry();
@@ -455,10 +368,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit PositionUpdated(_tickLower, _tickUpper);
     }
 
-    /**
-     * @notice Function to re-add liquidity to the position
-     * @dev Since this function adds the remaining liquidity to the current position, it could be called by everyone
-     */
+    /// @inheritdoc IPositionManager
     function reAddLiquidity() external {
         // Only re add liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidEntry();
@@ -477,22 +387,12 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit LiquidityAdded(_tickLower, _tickUpper);
     }
 
-    /**
-     * @notice Function to distribute rewards calling the factory contract
-     * @param amountOutMin Minimum amount out for the swap
-     * @dev Only the manager can call this function
-     */
+    /// @inheritdoc IPositionManager
     function distributeRewards(uint256 amountOutMin) external onlyRole(MANAGER_ROLE) {
         IPositionManagerDistributor(_factory).distributeRewards(receiverAddress, receiverPercentage, amountOutMin);
     }
 
-    /**
-     * @notice Function to get the percentage of the range
-     * @param amount0 Amount of token0 (must be in token0 units)
-     * @param amount1 Amount of token1 (must be in token1 units)
-     * @return percentage Percentage of the range
-     * @dev The percentage is calculated as the percentage of token0 in the pool
-     */
+    /// @inheritdoc IPositionManager
     function getRangePercentage(uint256 amount0, uint256 amount1) public view returns (uint256) {
         (uint160 sqrtPriceX96, , , , , , ) = _pool.slot0();
 
@@ -505,24 +405,14 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         return FullMath.mulDiv(liquidity0, uint128(PRECISION), liquidity0 + liquidity1);
     }
 
-    /**
-     * @notice Function to get the current tick range of the position
-     * @return tickLower Lower tick of the position
-     * @return tickUpper Upper tick of the position
-     * @dev The ticks are the same if the contract is not in position
-     */
+    /// @inheritdoc IPositionManager
     function getTickRange() public view returns (int24, int24) {
         return (_tickLower, _tickUpper);
     }
 
-    /**
-     * @notice Function to set the receiver address and fee percentage
-     * @param receiverAddress_ Address of the receiver
-     * @param receiverFeePercentage_ Percentage of the funds destined to the receiver
-     */
+    /// @inheritdoc IPositionManager
     function setReceiverData(address receiverAddress_, uint256 receiverFeePercentage_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (receiverFeePercentage_ > MAX_PERCENTAGE || receiverFeePercentage_ == 0 || receiverAddress_ == address(0))
-            revert InvalidInput();
+        if (receiverFeePercentage_ > MAX_PERCENTAGE || receiverFeePercentage_ == 0 || receiverAddress_ == address(0)) revert InvalidInput();
 
         receiverAddress = receiverAddress_;
         receiverPercentage = receiverFeePercentage_;
@@ -530,6 +420,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit ReceiverDataUpdated(receiverAddress_, receiverFeePercentage_);
     }
 
+    /// @inheritdoc IPositionManager
     function setSlippage(uint256 slippage) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (slippage > MAX_PERCENTAGE) revert InvalidInput();
 
@@ -538,18 +429,20 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         emit SlippageUpdated(slippage);
     }
 
+    /// @inheritdoc IPositionManager
     function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         minDepositAmount = minimumDepositAmount;
 
         emit MinDepositAmountUpdated(minimumDepositAmount);
     }
 
+    /// @inheritdoc IPositionManager
     function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _setFee(depositFeePercentage, feeReceiverAddress);
     }
 
     /// @dev Collects the fees from the position, swaps them to USDT and sends them to the factory
-    function _harvest() internal {
+    function _harvest() private {
         (uint256 amountToken0Before, uint256 amountToken1Before) = _getTotalAmounts();
 
         // Collect fees
@@ -586,7 +479,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     /// @dev Balances the contract tokens to maintain the proportion of token0 and token1 in the pool
-    function _balanceContractTokens(uint256 amountToken0, uint256 amountToken1, uint256 poolPrice) internal {
+    function _balanceContractTokens(uint256 amountToken0, uint256 amountToken1, uint256 poolPrice) private {
         uint256 contractLiqInToken0 = FullMath.mulDiv(amountToken1, PRECISION, poolPrice) + amountToken0;
         uint256 contractLiqInToken1 = FullMath.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
@@ -622,7 +515,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     /// @dev Balances the USDT amount to maintain the proportion of token0 and token1 in the pool
-    function _balanceSpecifiedUsdtAmount(uint256 usdtAmount, uint256 token1Price, uint256 poolPrice, uint256 token0Percentage) internal {
+    function _balanceSpecifiedUsdtAmount(uint256 usdtAmount, uint256 token1Price, uint256 poolPrice, uint256 token0Percentage) private {
         uint256 amountToSwapToToken0 = FullMath.mulDiv(usdtAmount, token0Percentage, PRECISION);
 
         uint256 token0Price = FullMath.mulDiv(token1Price, poolPrice, PRECISION);
@@ -670,7 +563,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
     }
 
     /// @notice Burns liquidity from the position
-    function _burnLiquidity(int24 tickLower, int24 tickUpper, uint128 liquidity) internal {
+    function _burnLiquidity(int24 tickLower, int24 tickUpper, uint128 liquidity) private {
         if (liquidity > 0) {
             // Burn liquidity
             _pool.burn(tickLower, tickUpper, liquidity);
@@ -680,7 +573,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         }
     }
 
-    function _collect() internal {
+    function _collect() private {
         uint128 liquidity = _liquidity(_tickLower, _tickUpper);
 
         // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
@@ -690,7 +583,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         _pool.collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
     }
 
-    function _getPoolTokensPrice() internal view returns (uint256) {
+    function _getPoolTokensPrice() private view returns (uint256) {
         (, int24 tick) = _priceAndTick();
 
         uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
@@ -699,16 +592,16 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         return FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
     }
 
-    function _priceAndTick() internal view returns (uint160 sqrtPriceX96, int24 tick) {
+    function _priceAndTick() private view returns (uint160 sqrtPriceX96, int24 tick) {
         (sqrtPriceX96, tick, , , , , ) = _pool.slot0();
     }
 
-    function _getTotalAmounts() internal view returns (uint256 total0, uint256 total1) {
+    function _getTotalAmounts() private view returns (uint256 total0, uint256 total1) {
         total0 = _token0.balanceOf(address(this));
         total1 = _token1.balanceOf(address(this));
     }
 
-    function _getAmountMin(uint256 amount, uint256 price, bool fromToken) internal view returns (uint256) {
+    function _getAmountMin(uint256 amount, uint256 price, bool fromToken) private view returns (uint256) {
         uint256 amountOutMin;
 
         if (fromToken)
@@ -719,7 +612,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         return FullMath.mulDiv(amountOutMin, MAX_PERCENTAGE - _slippage, MAX_PERCENTAGE);
     }
 
-    function _getChainlinkPrice() internal view returns (uint256) {
+    function _getChainlinkPrice() private view returns (uint256) {
         (, int256 price, , uint256 updatedAt, ) = _dataFeed.latestRoundData();
 
         if (price <= 0 || block.timestamp - TWENTY_MINUTES > updatedAt) revert InvalidInput();
@@ -733,7 +626,7 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         uint256 amountOutMin,
         bool zeroForOne,
         bool sqrtPriceLimitX96Case // false = min, true = max
-    ) internal returns (uint256) {
+    ) private returns (uint256) {
         uint256 balanceBefore;
 
         if (address(pool) == address(0) || amountIn == 0) return amountIn;
@@ -759,17 +652,17 @@ contract PositionManager is FeeManagement, IPancakeV3SwapCallback, AccessControl
         return amountOut;
     }
 
-    function _liquidityForShares(int24 tickLower, int24 tickUpper, uint256 shares) internal view returns (uint128) {
+    function _liquidityForShares(int24 tickLower, int24 tickUpper, uint256 shares) private view returns (uint128) {
         uint128 liquidity = _liquidity(tickLower, tickUpper);
         return _uint128Safe(FullMath.mulDiv(uint256(liquidity), shares, totalSupply()));
     }
 
-    function _liquidity(int24 tickLower, int24 tickUpper) internal view returns (uint128 liquidity) {
+    function _liquidity(int24 tickLower, int24 tickUpper) private view returns (uint128 liquidity) {
         bytes32 positionKey = keccak256(abi.encodePacked(address(this), tickLower, tickUpper));
         (liquidity, , , , ) = _pool.positions(positionKey);
     }
 
-    function _uint128Safe(uint256 x) internal pure returns (uint128) {
+    function _uint128Safe(uint256 x) private pure returns (uint128) {
         assert(x <= MAX_UINT128);
         return uint128(x);
     }
