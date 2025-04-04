@@ -4697,4 +4697,787 @@ export default async function suite(): Promise<void> {
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
         });
     });
+
+    describe("PositionManager SOL/WBNB", function () {
+        let SOLAddress = contractAddresses.SOL;
+
+        let SOLContract: IERC20;
+
+        const solToUsdt: BigNumber = ethers.utils.parseEther("232.602847"); // 1 SOL = 232.602847 USDT
+
+        const bnbChainLinkPrice: BigNumber = BigNumber.from(61540830210); // 61540830210 USDT
+
+        const minTick: BigNumber = BigNumber.from(-887250);
+        const maxTick: BigNumber = BigNumber.from(887250);
+
+        before(async function () {
+            await deployments.fixture(["PositionManagerDistributor"]);
+
+            PositionManagerDistributor = await ethers.getContract("PositionManagerDistributor_7");
+
+            [deployer, manager, user1, user2, user3, user4, receiver] = await ethers.getSigners();
+
+            const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
+
+            PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
+
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+
+            USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
+            WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
+            SOLContract = (await ethers.getContractAt("IERC20", SOLAddress)) as IERC20;
+
+            await PositionManager.connect(deployer).grantRole(roles.POSITION_MANAGER_ROLE, manager.address);
+
+            const holderAddress = "0x98cF4F4B03a4e967D54a3d0aeC9fCA90851f2Cca";
+
+            await hre.network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [holderAddress],
+            });
+
+            await deployer.sendTransaction({
+                to: holderAddress,
+                value: ethers.utils.parseEther("1"), // Send 1 BNB
+            });
+
+            // Get the holder signer
+            const holderSigner = await ethers.getSigner(holderAddress);
+
+            // Send 10000 USDT to the deployer
+            await USDTContract.connect(holderSigner).transfer(deployer.address, ethers.utils.parseUnits("10000", "18"));
+
+            // Stop impersonating the holder address
+            await hre.network.provider.request({
+                method: "hardhat_stopImpersonatingAccount",
+                params: [holderAddress],
+            });
+        });
+
+        beforeEach(async function () {
+            snap = await ethers.provider.send("evm_snapshot", []);
+        });
+
+        afterEach(async function () {
+            await ethers.provider.send("evm_revert", [snap]);
+        });
+
+        it("Should deposit USDT into Position Manager (!inPosition)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            await expect(PositionManagerDistributor.connect(user1).deposit(amount))
+                .to.emit(PositionManager, "Deposit")
+                .withArgs(user1.address, expectedShares, amount);
+
+            const balance = await PositionManager.balanceOf(user1.address);
+
+            expect(balance).to.be.eq(expectedShares);
+        });
+
+        it("Should deposit and withdraw USDT from Position Manager (!inPosition)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await expect(PositionManagerDistributor.connect(user1).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user1.address, expectedShares);
+
+            const newBalance = await PositionManager.balanceOf(user1.address);
+
+            expect(newBalance).to.be.eq(0);
+        });
+
+        it("Should manager add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+        });
+
+        it("Should manager add liquidity and re add liquidity to the pool", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 1);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.000001"));
+
+            await PositionManager.connect(manager).reAddLiquidity();
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 1);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0000000001"));
+        });
+
+        it("Should user deposit USDT after adding liquidity", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount.mul(2));
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount.mul(2));
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            await expect(PositionManagerDistributor.connect(user1).deposit(amount)).to.emit(PositionManager, "Deposit");
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const balance = await PositionManager.balanceOf(user1.address);
+
+            expect(balance).to.be.not.eq(0);
+        });
+
+        it("Should manager update ticks after adding liquidity", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const newMinTick = minTick.add(100);
+            const newMaxTick = maxTick.sub(100);
+
+            await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 1);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.000001"));
+
+            const ticks = await PositionManager.getTickRange();
+
+            expect(ticks[0]).to.be.eq(newMinTick);
+            expect(ticks[1]).to.be.eq(newMaxTick);
+        });
+
+        it("Should user withdraw after adding liquidity", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount.mul(2));
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount.mul(2));
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            await expect(PositionManagerDistributor.connect(user1).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user1.address, expectedShares);
+
+            const newBalance = await PositionManager.balanceOf(user1.address);
+
+            expect(newBalance).to.be.eq(0);
+        });
+
+        it("Should two users deposit USDT, then add liquidity and users withdraw", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+            await USDTContract.connect(deployer).transfer(user2.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+            await USDTContract.connect(user2).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+            await PositionManagerDistributor.connect(user2).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount.mul(2));
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 1);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            const user2NewBalance = await PositionManager.balanceOf(user2.address);
+
+            expect(user2NewBalance).to.be.eq(0);
+
+            const user1Balance = await PositionManager.balanceOf(user1.address);
+
+            expect(user1Balance).to.be.eq(expectedShares);
+
+            await expect(PositionManagerDistributor.connect(user1).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user1.address, expectedShares);
+
+            const user1NewBalance = await PositionManager.balanceOf(user1.address);
+
+            expect(user1NewBalance).to.be.eq(0);
+        });
+
+        it("Should deposit and add liquidity with different tick values (in range)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+        });
+
+        it("Should deposit and add liquidity with different tick values (under range)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(-60000, -50000);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+        });
+
+        it("Should deposit and add liquidity with different tick values (over range)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(-62000, -61000);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+        });
+
+        it("Should deposit, add liquidity and remove liquidity", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            await PositionManager.connect(manager).removeLiquidity();
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("3"));
+        });
+
+        it("Should deposit 3 times (different users)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+            await USDTContract.connect(deployer).transfer(user2.address, amount);
+            await USDTContract.connect(deployer).transfer(user3.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+            await USDTContract.connect(user2).approve(PositionManager.address, amount);
+            await USDTContract.connect(user3).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+            await PositionManagerDistributor.connect(user2).deposit(amount);
+            await PositionManagerDistributor.connect(user3).deposit(amount);
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+            expect(await PositionManager.balanceOf(user2.address)).to.be.eq(expectedShares);
+            expect(await PositionManager.balanceOf(user3.address)).to.be.eq(expectedShares);
+        });
+
+        it("Should deposit user1, add liquidity, and then 3 different users deposits and withdraw", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+
+            await USDTContract.connect(deployer).transfer(user2.address, amount);
+            await USDTContract.connect(deployer).transfer(user3.address, amount);
+            await USDTContract.connect(deployer).transfer(user4.address, amount);
+
+            await USDTContract.connect(user2).approve(PositionManager.address, amount);
+            await USDTContract.connect(user3).approve(PositionManager.address, amount);
+            await USDTContract.connect(user4).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user2).deposit(amount);
+            await PositionManagerDistributor.connect(user3).deposit(amount);
+            await PositionManagerDistributor.connect(user4).deposit(amount);
+
+            expect(await PositionManager.balanceOf(user2.address)).to.be.not.eq(0);
+
+            expect(await PositionManager.balanceOf(user3.address)).to.be.not.eq(0);
+
+            expect(await PositionManager.balanceOf(user4.address)).to.be.not.eq(0);
+
+            await PositionManagerDistributor.connect(user2).withdraw();
+            await PositionManagerDistributor.connect(user3).withdraw();
+            await PositionManagerDistributor.connect(user4).withdraw();
+
+            expect(await PositionManager.balanceOf(user2.address)).to.be.eq(0);
+
+            const user2WBNBBalanceInWBNB = await WBNBContract.balanceOf(user2.address);
+            const user2WBNBBalance = user2WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
+            const user2SOLBalanceInSOL = await SOLContract.balanceOf(user2.address);
+            const user2SOLBalance = user2SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user2WBNBBalance.add(user2SOLBalance)).to.be.closeTo(amount, ethers.utils.parseEther("0.1"));
+
+            expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
+
+            const user3WBNBBalanceInWBNB = await WBNBContract.balanceOf(user3.address);
+            const user3WBNBBalance = user3WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
+            const user3SOLBalanceInSOL = await SOLContract.balanceOf(user3.address);
+            const user3SOLBalance = user3SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user3WBNBBalance.add(user3SOLBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1.1"));
+
+            expect(await PositionManager.balanceOf(user4.address)).to.be.eq(0);
+
+            const user4WBNBBalanceInWBNB = await WBNBContract.balanceOf(user4.address);
+            const user4WBNBBalance = user4WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
+            const user4SOLBalanceInSOL = await SOLContract.balanceOf(user4.address);
+            const user4SOLBalance = user4SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user4WBNBBalance.add(user4SOLBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1.7"));
+
+            expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
+        });
+
+        it("Should deposit user1, add liquidity, and then 3 different users deposits and withdraw in other order", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+
+            await USDTContract.connect(deployer).transfer(user2.address, amount);
+            await USDTContract.connect(deployer).transfer(user3.address, amount);
+            await USDTContract.connect(deployer).transfer(user4.address, amount);
+
+            await USDTContract.connect(user2).approve(PositionManager.address, amount);
+            await USDTContract.connect(user3).approve(PositionManager.address, amount);
+            await USDTContract.connect(user4).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user4).deposit(amount);
+            await PositionManagerDistributor.connect(user3).deposit(amount);
+            await PositionManagerDistributor.connect(user2).deposit(amount);
+
+            expect(await PositionManager.balanceOf(user2.address)).to.be.not.eq(0);
+
+            expect(await PositionManager.balanceOf(user3.address)).to.be.not.eq(0);
+
+            expect(await PositionManager.balanceOf(user4.address)).to.be.not.eq(0);
+
+            await PositionManagerDistributor.connect(user4).withdraw();
+            await PositionManagerDistributor.connect(user3).withdraw();
+            await PositionManagerDistributor.connect(user2).withdraw();
+
+            expect(await PositionManager.balanceOf(user4.address)).to.be.eq(0);
+
+            const user4WBNBBalanceInWBNB = await WBNBContract.balanceOf(user4.address);
+            const user4WBNBBalance = user4WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
+            const user4SOLBalanceInSOL = await SOLContract.balanceOf(user4.address);
+            const user4SOLBalance = user4SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user4WBNBBalance.add(user4SOLBalance)).to.be.closeTo(amount, ethers.utils.parseEther("0.1"));
+
+            expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
+
+            const user3WBNBBalanceInWBNB = await WBNBContract.balanceOf(user3.address);
+            const user3WBNBBalance = user3WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
+            const user3SOLBalanceInSOL = await SOLContract.balanceOf(user3.address);
+            const user3SOLBalance = user3SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user3WBNBBalance.add(user3SOLBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1.1"));
+
+            expect(await PositionManager.balanceOf(user2.address)).to.be.eq(0);
+
+            const user2WBNBBalanceInWBNB = await WBNBContract.balanceOf(user2.address);
+            const user2WBNBBalance = user2WBNBBalanceInWBNB.mul(wbnbToUsdt).div(BigNumber.from(10).pow(18));
+            const user2SOLBalanceInSOL = await SOLContract.balanceOf(user2.address);
+            const user2SOLBalance = user2SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            expect(user2WBNBBalance.add(user2SOLBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1.7"));
+
+            expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
+        });
+
+        it("Should deposit, add liquidity, and withdraw will close position, so we can deposit and add liquidity again", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(expectedShares);
+
+            await PositionManagerDistributor.connect(user1).withdraw();
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.eq(0);
+
+            await USDTContract.connect(deployer).transfer(user2.address, amount);
+
+            await USDTContract.connect(user2).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user2).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+            const expectedShares2 = amount.mul(bnbChainLinkPrice);
+
+            expect(await PositionManager.balanceOf(user2.address)).to.be.eq(expectedShares2);
+        });
+
+        it("Should add and remove liquidity 10 times, then withdraw", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
+
+            for (let i = 0; i < 10; i++) {
+                await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
+
+                expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 1);
+                expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+
+                await PositionManager.connect(manager).removeLiquidity();
+
+                expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(amount, ethers.utils.parseEther("26"));
+            }
+
+            // Lose max 26 USDT in 10 add/remove liquidity
+            await PositionManagerDistributor.connect(user1).withdraw();
+
+            const user1USDTBalance = await USDTContract.balanceOf(user1.address);
+
+            expect(user1USDTBalance).to.be.closeTo(amount, ethers.utils.parseEther("26"));
+        });
+
+        it("Should set a deposit fee and charge it in a deposit", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            const amountAfterFee = amount.mul(900000).div(1000000);
+
+            const amountCharged = amount.sub(amountAfterFee);
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManager.connect(deployer).setFee(100000, user2.address);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amountAfterFee);
+
+            expect(await PositionManager.balanceOf(user1.address)).to.be.closeTo(amountAfterFee.mul(bnbChainLinkPrice), ethers.utils.parseEther("1"));
+
+            const user1USDTBalance = await USDTContract.balanceOf(user1.address);
+            expect(user1USDTBalance).to.be.eq(0);
+
+            const user2USDTBalance = await USDTContract.balanceOf(user2.address);
+            expect(user2USDTBalance).to.be.equal(amountCharged);
+        });
+
+        it("revert: fails to distribute rewards if the contract has no balance", async function () {
+            await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
+        });
+
+        it("should distribute to the receiver (zero users)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+
+            expect(receiverBalance).to.be.closeTo(amount.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+        });
+
+        it("an user deposits and distributeRewards is called", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            const user1USDTBalance = await USDTContract.balanceOf(user1.address);
+
+            expect(user1USDTBalance).to.be.eq(0);
+
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
+
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
+        });
+
+        it("revert: an user cannot collect rewards if the contract has no balance", async function () {
+            await expect(PositionManagerDistributor.connect(user1).collectRewards()).to.be.revertedWith("InvalidEntry");
+        });
+
+        it("an user deposits, distributeRewards is called and the user collects rewards", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            await PositionManagerDistributor.connect(user1).collectRewards();
+
+            const user1USDTBalance = await USDTContract.balanceOf(user1.address);
+
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+
+            const expectedUser1USDTBalance = amount.sub(expectedReceiverBalance);
+
+            expect(user1USDTBalance).to.be.equal(expectedUser1USDTBalance);
+
+            const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
+
+            expect(user1ContractUSDTBalance).to.be.eq(0);
+
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            const PositionManagerDistributorBalance = await USDTContract.balanceOf(PositionManagerDistributor.address);
+
+            expect(PositionManagerDistributorBalance).to.be.eq(0);
+        });
+
+        it("4 users deposit differents amounts and distributeRewards is called", async function () {
+            const amount1 = ethers.utils.parseEther("500");
+            const amount2 = ethers.utils.parseEther("1000");
+            const amount3 = ethers.utils.parseEther("1500");
+            const amount4 = ethers.utils.parseEther("2000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount1);
+            await USDTContract.connect(deployer).transfer(user2.address, amount2);
+            await USDTContract.connect(deployer).transfer(user3.address, amount3);
+            await USDTContract.connect(deployer).transfer(user4.address, amount4);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount1);
+            await USDTContract.connect(user2).approve(PositionManager.address, amount2);
+            await USDTContract.connect(user3).approve(PositionManager.address, amount3);
+            await USDTContract.connect(user4).approve(PositionManager.address, amount4);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount1);
+            await PositionManagerDistributor.connect(user2).deposit(amount2);
+            await PositionManagerDistributor.connect(user3).deposit(amount3);
+            await PositionManagerDistributor.connect(user4).deposit(amount4);
+
+            const totalAmount = amount1.add(amount2).add(amount3).add(amount4);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, totalAmount);
+
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            const user1USDTBalance = await USDTContract.balanceOf(user1.address);
+            const user2USDTBalance = await USDTContract.balanceOf(user2.address);
+            const user3USDTBalance = await USDTContract.balanceOf(user3.address);
+            const user4USDTBalance = await USDTContract.balanceOf(user4.address);
+
+            expect(user1USDTBalance).to.be.eq(0);
+            expect(user2USDTBalance).to.be.eq(0);
+            expect(user3USDTBalance).to.be.eq(0);
+            expect(user4USDTBalance).to.be.eq(0);
+
+            const expectedReceiverBalance = totalAmount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
+
+            const expectedReceiverBalanceUser1 = amount1.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser2 = amount2.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser3 = amount3.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalanceUser4 = amount4.mul(percentages.ReceiverPercentage).div(maxPercentage);
+
+            const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const user2ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user2.address);
+            const user3ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user3.address);
+            const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
+
+            const expectedUser1USDTBalance = amount1.sub(expectedReceiverBalanceUser1);
+            const expectedUser2USDTBalance = amount2.sub(expectedReceiverBalanceUser2);
+            const expectedUser3USDTBalance = amount3.sub(expectedReceiverBalanceUser3);
+            const expectedUser4USDTBalance = amount4.sub(expectedReceiverBalanceUser4);
+
+            expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
+            expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
+            expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
+            expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
+        });
+    });
 }
