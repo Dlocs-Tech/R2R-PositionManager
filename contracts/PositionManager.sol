@@ -465,7 +465,7 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
 
         uint256 poolPrice = _getPoolTokensPrice();
 
-        uint256 amountOutMin = FullMath.mulDiv(amountToken0, PRECISION, poolPrice); // amountOutMin in token0 to token1
+        uint256 amountOutMin = FullMath.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
         amountToken0 = _swapUsingPool(
             _pool0,
