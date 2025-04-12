@@ -348,14 +348,14 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         if (_tickLower == _tickUpper) revert InvalidEntry();
         if (tickLower > tickUpper) revert InvalidInput();
 
-        _tickLower = tickLower;
-        _tickUpper = tickUpper;
-
         // Harvest to collect fees
         _harvest();
 
         // Burn liquidity from the position
         _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
+
+        _tickLower = tickLower;
+        _tickUpper = tickUpper;
 
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 

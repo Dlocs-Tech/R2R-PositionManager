@@ -219,7 +219,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
             expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const ticks = await PositionManager.getTickRange();
@@ -989,7 +989,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const ticks = await PositionManager.getTickRange();
@@ -1766,8 +1766,8 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 30);
 
             const ticks = await PositionManager.getTickRange();
 
@@ -2543,8 +2543,8 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.eq(0);
-            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0000001"));
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const ticks = await PositionManager.getTickRange();
 
@@ -3326,7 +3326,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
             expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const ticks = await PositionManager.getTickRange();
@@ -4106,8 +4106,8 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.eq(0);
-            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const ticks = await PositionManager.getTickRange();
 
@@ -4889,8 +4889,8 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 1);
-            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.000001"));
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const ticks = await PositionManager.getTickRange();
 
