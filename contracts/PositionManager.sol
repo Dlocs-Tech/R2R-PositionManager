@@ -123,7 +123,8 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
             usdtAddress == address(0) ||
             receiverAddress_ == address(0) ||
             receiverFeePercentage_ > MAX_PERCENTAGE ||
-            receiverFeePercentage_ == 0
+            receiverFeePercentage_ == 0 ||
+            (pool0Address == address(0) && pool1Address == address(0))
         ) revert InvalidInput();
 
         _dataFeed = AggregatorV3Interface(dataFeedAddress);
