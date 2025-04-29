@@ -605,9 +605,8 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     function _getAmountMin(uint256 amount, uint256 price, bool fromToken) private view returns (uint256) {
         uint256 amountOutMin;
 
-        if (fromToken)
-            amountOutMin = FullMath.mulDiv(amount, price, PRECISION) / CHAINLINK_PRECISION; // 10**8 is the precision of the chainlink price
-        else amountOutMin = FullMath.mulDiv(amount, (PRECISION) * CHAINLINK_PRECISION, price); // 10**8 is the precision of the chainlink price
+        if (fromToken) amountOutMin = FullMath.mulDiv(amount, price, PRECISION) / CHAINLINK_PRECISION;
+        else amountOutMin = FullMath.mulDiv(amount, (PRECISION) * CHAINLINK_PRECISION, price);
 
         // amountOutMin with slippage applied
         return FullMath.mulDiv(amountOutMin, MAX_PERCENTAGE - _slippage, MAX_PERCENTAGE);
