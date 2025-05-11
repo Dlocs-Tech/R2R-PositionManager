@@ -196,7 +196,7 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
 
             uint256 contractLiqInToken0 = FullMath.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
 
-            uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1);
+            uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1, poolPrice);
 
             // Swap USDT to token0 and token1 maintaining the balance percentage
             _balanceSpecifiedUsdtAmount(depositAmount, token1Price, poolPrice, token0Percentage);
@@ -292,7 +292,7 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         uint256 contractLiqInToken0 = FullMath.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
 
         // Calculate the percentage of token0 in the pool to know how much to swap
-        uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1);
+        uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1, poolPrice);
 
         _balanceSpecifiedUsdtAmount(usdtAmount, token1Price, poolPrice, token0Percentage);
 
@@ -394,16 +394,21 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     }
 
     /// @inheritdoc IPositionManager
-    function getRangePercentage(uint256 amount0, uint256 amount1) public view returns (uint256) {
-        (uint160 sqrtPriceX96, , , , , , ) = _pool.slot0();
+    function getRangePercentage(uint256 amount0, uint256 amount1, uint256 poolPrice) public view returns (uint256) {
+        (uint160 sqrtPrice, int24 tick) = _priceAndTick();
 
+        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(_tickLower);
         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(_tickUpper);
 
-        uint128 liquidity0 = LiquidityAmounts.getLiquidityForAmount0Sorted(sqrtPriceX96, sqrtRatioBX96, amount0);
-        uint128 liquidity1 = LiquidityAmounts.getLiquidityForAmount1Sorted(sqrtRatioAX96, sqrtPriceX96, amount1);
+        uint128 liquidity0 = LiquidityAmounts.getLiquidityForAmount0Sorted(sqrtPrice, sqrtRatioBX96, amount0);
+        uint128 liquidity1 = LiquidityAmounts.getLiquidityForAmount1Sorted(sqrtRatioAX96, sqrtPrice, amount1);
 
-        return FullMath.mulDiv(liquidity0, uint128(PRECISION), liquidity0 + liquidity1);
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(sqrtRatioX96, sqrtRatioAX96, sqrtRatioBX96, liquidity0 + liquidity1);
+
+        uint256 contractLiqInToken0 = FullMath.mulDiv(amount1, PRECISION, poolPrice);
+
+        return FullMath.mulDiv(amount0, uint128(PRECISION), amount0 + contractLiqInToken0);
     }
 
     /// @inheritdoc IPositionManager
@@ -485,7 +490,7 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         uint256 contractLiqInToken1 = FullMath.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
         // Calculate the percentage of token0 in the pool to know how much to swap
-        uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1);
+        uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1, poolPrice);
 
         // Calculate the percentage of token0 in the contract
         uint256 currentToken0Percentage = PRECISION - FullMath.mulDiv(amountToken1, PRECISION, contractLiqInToken1);

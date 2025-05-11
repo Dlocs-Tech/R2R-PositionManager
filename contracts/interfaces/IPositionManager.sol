@@ -127,10 +127,11 @@ interface IPositionManager {
      * @notice Function to get the percentage of the range
      * @param amount0 Amount of token0 (must be in token0 units)
      * @param amount1 Amount of token1 (must be in token1 units)
+     * @param poolPrice Price of the pool
      * @return percentage Percentage of the range
-     * @dev The percentage is calculated as the percentage of token0 in the pool
+     * @dev The percentage is calculated as the percentage of token0 in the pool (using the amounts of the range)
      */
-    function getRangePercentage(uint256 amount0, uint256 amount1) external view returns (uint256);
+    function getRangePercentage(uint256 amount0, uint256 amount1, uint256 poolPrice) external view returns (uint256);
 
     /**
      * @notice Function to get the current tick range of the position
