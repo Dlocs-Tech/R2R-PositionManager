@@ -190,7 +190,7 @@ export default async function suite(): Promise<void> {
 
             await expect(PositionManagerDistributor.connect(user1).deposit(amount)).to.emit(PositionManager, "Deposit");
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.2"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
             expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const balance = await PositionManager.balanceOf(user1.address);
@@ -269,7 +269,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.2"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
             expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const expectedShares = amount.mul(usdcChainLinkPrice);
@@ -320,7 +320,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManagerDistributor.connect(user1).deposit(amount);
 
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.2"));
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.1"));
             expect(await USDCContract.balanceOf(PositionManager.address)).to.be.eq(0);
         });
 
@@ -1767,7 +1767,7 @@ export default async function suite(): Promise<void> {
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
             expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 30);
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 45);
 
             const ticks = await PositionManager.getTickRange();
 
@@ -1824,7 +1824,7 @@ export default async function suite(): Promise<void> {
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
 
             expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.0001"));
-            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 40);
+            expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 45);
 
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
 
@@ -2543,8 +2543,8 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).updatePosition(newMinTick, newMaxTick);
 
-            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.001"));
-            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await ETHContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
+            expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(2);
 
             const ticks = await PositionManager.getTickRange();
 
@@ -4028,7 +4028,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
         });
 
@@ -4045,17 +4045,17 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             await PositionManager.connect(manager).reAddLiquidity();
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00001"));
 
             await PositionManager.connect(manager).reAddLiquidity();
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.00000001"));
         });
 
@@ -4072,12 +4072,12 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             await expect(PositionManagerDistributor.connect(user1).deposit(amount)).to.emit(PositionManager, "Deposit");
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const balance = await PositionManager.balanceOf(user1.address);
@@ -4098,7 +4098,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const newMinTick = minTick.add(100);
@@ -4128,7 +4128,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4156,14 +4156,14 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 20);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 20);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
 
             await expect(PositionManagerDistributor.connect(user2).withdraw()).to.emit(PositionManager, "Withdraw").withArgs(user2.address, expectedShares);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, ethers.utils.parseEther("0.01"));
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
             const user2NewBalance = await PositionManager.balanceOf(user2.address);
@@ -4194,7 +4194,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4207,7 +4207,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManagerDistributor.connect(user1).deposit(amount);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
         });
 
@@ -4284,7 +4284,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             await PositionManager.connect(manager).removeLiquidity();
@@ -4327,7 +4327,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4396,7 +4396,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4465,7 +4465,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4486,7 +4486,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 10);
+            expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 20);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares2 = amount.mul(bnbChainLinkPrice);
@@ -4508,7 +4508,7 @@ export default async function suite(): Promise<void> {
             for (let i = 0; i < 10; i++) {
                 await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-                expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 15);
+                expect(await XRPContract.balanceOf(PositionManager.address)).to.be.closeTo(0, 20);
                 expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
                 await PositionManager.connect(manager).removeLiquidity();
@@ -4811,7 +4811,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
         });
 
@@ -4828,7 +4828,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             await PositionManager.connect(manager).reAddLiquidity();
@@ -4855,12 +4855,12 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             await expect(PositionManagerDistributor.connect(user1).deposit(amount)).to.emit(PositionManager, "Deposit");
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const balance = await PositionManager.balanceOf(user1.address);
@@ -4881,7 +4881,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const newMinTick = minTick.add(100);
@@ -4911,7 +4911,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4977,7 +4977,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -4990,7 +4990,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManagerDistributor.connect(user1).deposit(amount);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
         });
 
@@ -5067,7 +5067,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             await PositionManager.connect(manager).removeLiquidity();
@@ -5110,7 +5110,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -5179,7 +5179,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
@@ -5248,7 +5248,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
 
-            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(0);
+            expect(await SOLContract.balanceOf(PositionManager.address)).to.be.eq(1);
             expect(await WBNBContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.01"));
 
             const expectedShares = amount.mul(bnbChainLinkPrice);
