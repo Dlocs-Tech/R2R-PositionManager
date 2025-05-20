@@ -2,7 +2,7 @@ import { roles } from "../utils/constants";
 import { ethers } from "hardhat";
 
 // command to execute script:
-// npx hardhat run ./scripts/PositionManager/grantManagerRole.ts --network <network name>
+// npx hardhat run ./scripts/grantManagerRole.ts --network <network name>
 
 const manager = "";
 
