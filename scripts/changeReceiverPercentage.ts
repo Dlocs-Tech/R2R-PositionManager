@@ -1,4 +1,3 @@
-import { initValues_PositionManagerDistributor, roles, contractAddresses } from "../utils/constants";
 import { ethers } from "hardhat";
 
 // command to execute script:
@@ -16,7 +15,7 @@ export async function main() {
 
     const PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-    const receiverAddress = await PositionManagerDistributor.receiverAddress();
+    const receiverAddress = await PositionManager.receiverAddress();
 
     console.log("Receiver address:", receiverAddress);
 
