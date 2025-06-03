@@ -35,8 +35,6 @@ export const contractAddresses: any = {
 
     DefaultReceiverAddress: "0xDCE30F31ccf1F19C314b8E41586FfdE58aED96D6",
 
-    R2RWallet : "0x2F764e19d71904EE6dD89Df47117Dcdf6dbB8d82",
-    Admin: "0x43c12678434DBEcE2C013008810dDf3a561C0cef",
     Manager: "0x21151F4eF2e4680EBdC9A9ebAAa54610d9efF57f"
 };
 
