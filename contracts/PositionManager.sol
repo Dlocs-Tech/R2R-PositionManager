@@ -21,6 +21,7 @@ import {FeeManagement} from "./FeeManagement.sol";
  * @dev Contract that allows users to deposit and withdraw from a position strategy in PancakeSwap managed by a manager
  *      NOTE: Users deposit USDT and receive shares in return
  *            Users withdraw shares and receive USDT or Token0 and Token1 in return
+ *            All the tokens are expected to have 18 decimals
  *
  *            The operator can make the contract open, close and update a position with the funds deposited by the users
  *
@@ -148,7 +149,7 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         if (address(_pool0) != address(0) && _pool0.token1() == usdtAddress) _pool0Direction = true;
-        else if (address(_pool1) != address(0) && _pool1.token1() == usdtAddress) _pool1Direction = true;
+        if (address(_pool1) != address(0) && _pool1.token1() == usdtAddress) _pool1Direction = true;
     }
 
     /// @inheritdoc IPositionManager
