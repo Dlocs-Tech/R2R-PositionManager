@@ -16,6 +16,7 @@ import {PositionManager} from "./PositionManager.sol";
  * @title PositionManagerDistributor
  * @notice Distributes the rewards of the PositionManager contract
  * @dev The rewards are distributed to the users and a specified receiver address
+ * NOTE: If user transfers their shares, they will need to perform another deposit to be in the user set
  */
 contract PositionManagerDistributor is IPositionManagerDistributor, IPancakeV3SwapCallback {
     using SafeERC20 for IERC20;
