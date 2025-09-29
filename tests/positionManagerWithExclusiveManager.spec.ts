@@ -826,6 +826,37 @@ export default async function suite(): Promise<void> {
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
         });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            // Cast to the correct contract type and set exclusive manager to address(0) with 0 percentage
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that address(0) did not receive any funds (should always be 0)
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Check that receiver gets the full percentage of the total amount (no exclusive manager deduction)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // Check that user gets the remaining amount (no exclusive manager deduction)
+            const user1ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            expect(user1ContractUSDTBalance).to.be.equal(amount.sub(expectedReceiverBalance));
+        });
     });
 
     describe("PositionManager USDT/WBNB", function () {
@@ -1616,6 +1647,39 @@ export default async function suite(): Promise<void> {
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
+        });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            // Set exclusive manager to address(0) with 0% fee
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            // Distribute rewards
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that exclusive manager (address(0)) receives no funds
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Receiver should get 35% of the total amount (no deduction for exclusive manager)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // User should get remaining 65% of the total amount
+            const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const expectedUserBalance = amount.sub(expectedReceiverBalance);
+            expect(userBalance).to.be.equal(expectedUserBalance);
         });
     });
 
@@ -2414,6 +2478,39 @@ export default async function suite(): Promise<void> {
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
+        });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            // Set exclusive manager to address(0) with 0% fee
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            // Distribute rewards
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that exclusive manager (address(0)) receives no funds
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Receiver should get 35% of the total amount (no deduction for exclusive manager)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // User should get remaining 65% of the total amount
+            const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const expectedUserBalance = amount.sub(expectedReceiverBalance);
+            expect(userBalance).to.be.equal(expectedUserBalance);
         });
     });
 
@@ -3219,6 +3316,39 @@ export default async function suite(): Promise<void> {
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
         });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            // Set exclusive manager to address(0) with 0% fee
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            // Distribute rewards
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that exclusive manager (address(0)) receives no funds
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Receiver should get 35% of the total amount (no deduction for exclusive manager)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // User should get remaining 65% of the total amount
+            const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const expectedUserBalance = amount.sub(expectedReceiverBalance);
+            expect(userBalance).to.be.equal(expectedUserBalance);
+        });
     });
 
     describe("PositionManager USDT/BTCB", function () {
@@ -4019,6 +4149,39 @@ export default async function suite(): Promise<void> {
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
+        });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            // Set exclusive manager to address(0) with 0% fee
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            // Distribute rewards
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that exclusive manager (address(0)) receives no funds
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Receiver should get 35% of the total amount (no deduction for exclusive manager)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // User should get remaining 65% of the total amount
+            const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const expectedUserBalance = amount.sub(expectedReceiverBalance);
+            expect(userBalance).to.be.equal(expectedUserBalance);
         });
     });
 
@@ -4824,6 +4987,39 @@ export default async function suite(): Promise<void> {
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
         });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            // Set exclusive manager to address(0) with 0% fee
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            // Distribute rewards
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that exclusive manager (address(0)) receives no funds
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Receiver should get 35% of the total amount (no deduction for exclusive manager)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // User should get remaining 65% of the total amount
+            const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const expectedUserBalance = amount.sub(expectedReceiverBalance);
+            expect(userBalance).to.be.equal(expectedUserBalance);
+        });
     });
 
     describe("PositionManager SOL/WBNB", function () {
@@ -5627,6 +5823,39 @@ export default async function suite(): Promise<void> {
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
             expect(user3ContractUSDTBalance).to.be.equal(expectedUser3USDTBalance);
             expect(user4ContractUSDTBalance).to.be.equal(expectedUser4USDTBalance);
+        });
+
+        it("should not send funds to exclusive manager when set to address(0)", async function () {
+            const amount = ethers.utils.parseEther("1000");
+
+            await USDTContract.connect(deployer).transfer(user1.address, amount);
+
+            await USDTContract.connect(user1).approve(PositionManager.address, amount);
+
+            // Set exclusive manager to address(0) with 0% fee
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            await exclusiveManagerContract.connect(deployer).setExclusiveManagerData(ethers.constants.AddressZero, 0);
+
+            await PositionManagerDistributor.connect(user1).deposit(amount);
+
+            await USDTContract.connect(deployer).transfer(PositionManagerDistributor.address, amount);
+
+            // Distribute rewards
+            await PositionManager.connect(manager).distributeRewards(0);
+
+            // Check that exclusive manager (address(0)) receives no funds
+            const exclusiveManagerBalance = await USDTContract.balanceOf(ethers.constants.AddressZero);
+            expect(exclusiveManagerBalance).to.be.equal(0);
+
+            // Receiver should get 35% of the total amount (no deduction for exclusive manager)
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const receiverBalance = await WBNBContract.balanceOf(receiver.address);
+            expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
+
+            // User should get remaining 65% of the total amount
+            const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
+            const expectedUserBalance = amount.sub(expectedReceiverBalance);
+            expect(userBalance).to.be.equal(expectedUserBalance);
         });
     });
 }
