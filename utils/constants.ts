@@ -35,11 +35,14 @@ export const contractAddresses: any = {
 
     DefaultReceiverAddress: "0xDCE30F31ccf1F19C314b8E41586FfdE58aED96D6",
 
-    Manager: "0x21151F4eF2e4680EBdC9A9ebAAa54610d9efF57f"
+    Manager: "0x21151F4eF2e4680EBdC9A9ebAAa54610d9efF57f",
+
+    ExclusiveManager: "0x896D9c062535a4E7875d78ba40803938dC352761", // Example address
 };
 
 export const percentages: any = {
     ReceiverPercentage: 350000, // 35%
+    ExclusiveManagerPercentage: 150000 // 15%
 };
 
 export const initValues_PositionManagerDistributor: any = {
