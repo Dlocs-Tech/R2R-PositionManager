@@ -666,10 +666,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
 
         it("should distribute to the receiver (zero users)", async function () {
@@ -749,10 +749,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -811,7 +811,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -825,10 +825,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -1571,10 +1583,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -1633,7 +1645,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -1647,10 +1659,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -1694,10 +1718,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
     });
 
@@ -2411,10 +2435,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -2473,7 +2497,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -2487,10 +2511,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -2534,10 +2570,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
     });
 
@@ -3257,10 +3293,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -3319,7 +3355,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -3333,10 +3369,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -3380,10 +3428,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
     });
 
@@ -4100,10 +4148,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -4162,7 +4210,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -4176,10 +4224,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -4223,10 +4283,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
     });
 
@@ -4946,10 +5006,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -5008,7 +5068,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -5022,10 +5082,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -5069,10 +5141,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
     });
 
@@ -5792,10 +5864,10 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
-            
+
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
 
@@ -5854,7 +5926,7 @@ export default async function suite(): Promise<void> {
             // First, exclusive manager takes 15% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
-            
+
             // Then receiver takes 35% of the remaining
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -5868,10 +5940,22 @@ export default async function suite(): Promise<void> {
             const user4ContractUSDTBalance = await PositionManagerDistributor.balanceOf(user4.address);
 
             // Calculate each user's portion after exclusive manager takes their cut
-            const expectedUser1USDTBalance = amount1.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser2USDTBalance = amount2.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser3USDTBalance = amount3.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
-            const expectedUser4USDTBalance = amount4.mul(remainingAfterExclusiveManager).div(totalAmount).sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser1USDTBalance = amount1
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount1.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser2USDTBalance = amount2
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount2.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser3USDTBalance = amount3
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount3.mul(expectedReceiverBalance).div(totalAmount));
+            const expectedUser4USDTBalance = amount4
+                .mul(remainingAfterExclusiveManager)
+                .div(totalAmount)
+                .sub(amount4.mul(expectedReceiverBalance).div(totalAmount));
 
             expect(user1ContractUSDTBalance).to.be.equal(expectedUser1USDTBalance);
             expect(user2ContractUSDTBalance).to.be.equal(expectedUser2USDTBalance);
@@ -5915,10 +5999,10 @@ export default async function suite(): Promise<void> {
         it("revert: fails to set exclusive manager percentage over 100%", async function () {
             const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
             const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
-            
-            await expect(
-                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
-            ).to.be.revertedWith("InvalidEntry");
+
+            await expect(exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)).to.be.revertedWith(
+                "InvalidEntry"
+            );
         });
     });
 }
