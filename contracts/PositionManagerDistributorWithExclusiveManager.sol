@@ -28,6 +28,9 @@ contract PositionManagerDistributorWithExclusiveManager is IPositionManagerDistr
     /// @notice Default admin role
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
 
+    /// @notice Event emitted when the exclusive manager data is updated
+    event ExclusiveManagerDataUpdated(address exclusiveManager, uint256 exclusiveManagerFeePercentage);
+
     /// @notice Pool of USDT/WNative
     IPancakeV3Pool public immutable pool;
 
@@ -183,6 +186,8 @@ contract PositionManagerDistributorWithExclusiveManager is IPositionManagerDistr
 
         _exclusiveManager = newExclusiveManager;
         _exclusiveManagerFeePercentage = newExclusiveManagerFeePercentage;
+
+        emit ExclusiveManagerDataUpdated(newExclusiveManager, newExclusiveManagerFeePercentage);
     }
 
     /// @inheritdoc IPositionManagerDistributor
