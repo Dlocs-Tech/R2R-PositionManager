@@ -663,6 +663,15 @@ export default async function suite(): Promise<void> {
             await expect(PositionManager.connect(manager).distributeRewards(0)).to.be.revertedWith("InvalidEntry");
         });
 
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
+        });
+
         it("should distribute to the receiver (zero users)", async function () {
             const amount = ethers.utils.parseEther("1000");
 
@@ -1681,6 +1690,15 @@ export default async function suite(): Promise<void> {
             const expectedUserBalance = amount.sub(expectedReceiverBalance);
             expect(userBalance).to.be.equal(expectedUserBalance);
         });
+
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
+        });
     });
 
     describe("PositionManager ETH/USDT", function () {
@@ -2511,6 +2529,15 @@ export default async function suite(): Promise<void> {
             const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const expectedUserBalance = amount.sub(expectedReceiverBalance);
             expect(userBalance).to.be.equal(expectedUserBalance);
+        });
+
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
         });
     });
 
@@ -3349,6 +3376,15 @@ export default async function suite(): Promise<void> {
             const expectedUserBalance = amount.sub(expectedReceiverBalance);
             expect(userBalance).to.be.equal(expectedUserBalance);
         });
+
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
+        });
     });
 
     describe("PositionManager USDT/BTCB", function () {
@@ -4182,6 +4218,15 @@ export default async function suite(): Promise<void> {
             const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const expectedUserBalance = amount.sub(expectedReceiverBalance);
             expect(userBalance).to.be.equal(expectedUserBalance);
+        });
+
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
         });
     });
 
@@ -5020,6 +5065,15 @@ export default async function suite(): Promise<void> {
             const expectedUserBalance = amount.sub(expectedReceiverBalance);
             expect(userBalance).to.be.equal(expectedUserBalance);
         });
+
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
+        });
     });
 
     describe("PositionManager SOL/WBNB", function () {
@@ -5856,6 +5910,15 @@ export default async function suite(): Promise<void> {
             const userBalance = await PositionManagerDistributor.balanceOf(user1.address);
             const expectedUserBalance = amount.sub(expectedReceiverBalance);
             expect(userBalance).to.be.equal(expectedUserBalance);
+        });
+
+        it("revert: fails to set exclusive manager percentage over 100%", async function () {
+            const exclusiveManagerContract = await ethers.getContractAt("PositionManagerDistributorWithExclusiveManager", PositionManagerDistributor.address);
+            const invalidPercentage = maxPercentage.add(1); // 1,000,001 (over 100%)
+            
+            await expect(
+                exclusiveManagerContract.connect(deployer).setExclusiveManagerData(exclusiveManagerAddress, invalidPercentage)
+            ).to.be.revertedWith("InvalidEntry");
         });
     });
 }
