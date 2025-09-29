@@ -102,4 +102,12 @@ export const initValues_PositionManagerDistributor: any = {
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
     },
+    XRP_USDT: {
+        dataFeedAddress: contractAddresses["ChainLink_USDT_USD"],
+        poolAddress: contractAddresses["Pool_XRP_USDT"],
+        pool0Address: contractAddresses["Pool_XRP_USDT"],
+        pool1Address: ethers.constants.AddressZero,
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
+    },
 };
