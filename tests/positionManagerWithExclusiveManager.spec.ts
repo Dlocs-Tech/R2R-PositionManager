@@ -53,7 +53,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             USDCContract = (await ethers.getContractAt("IERC20", USDCAddress)) as IERC20;
@@ -715,7 +715,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -750,8 +750,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -812,8 +812,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -870,7 +870,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Check that receiver gets the full percentage of the total amount (no exclusive manager deduction)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -897,7 +897,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -1549,7 +1549,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -1585,7 +1585,7 @@ export default async function suite(): Promise<void> {
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
             // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -1646,8 +1646,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -1705,7 +1705,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -1748,7 +1748,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             ETHContract = (await ethers.getContractAt("IERC20", ETHAddress)) as IERC20;
@@ -2401,7 +2401,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -2436,8 +2436,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -2498,8 +2498,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -2557,7 +2557,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -2600,7 +2600,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -3259,7 +3259,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -3294,8 +3294,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -3356,8 +3356,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -3415,7 +3415,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -3458,7 +3458,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             BTCBContract = (await ethers.getContractAt("IERC20", BTCBAddress)) as IERC20;
@@ -4114,7 +4114,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -4149,8 +4149,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -4211,8 +4211,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -4270,7 +4270,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -4313,7 +4313,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -4972,7 +4972,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -5007,8 +5007,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -5069,8 +5069,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -5128,7 +5128,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -5171,7 +5171,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             WBNBContract = (await ethers.getContractAt("IERC20", WBNBAddress)) as IERC20;
@@ -5830,7 +5830,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -5865,8 +5865,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -5927,8 +5927,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -5986,7 +5986,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
 
@@ -6029,7 +6029,7 @@ export default async function suite(): Promise<void> {
 
             PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
-            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentage);
+            await PositionManager.setReceiverData(receiver.address, percentages.ReceiverPercentageInExclusiveManagerVersion);
 
             USDTContract = (await ethers.getContractAt("IERC20", USDTAddress)) as IERC20;
             XRPContract = (await ethers.getContractAt("IERC20", XRPAddress)) as IERC20;
@@ -6682,7 +6682,7 @@ export default async function suite(): Promise<void> {
 
             // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.001"));
@@ -6717,8 +6717,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             // User gets the rest
             const expectedUser1USDTBalance = remainingAfterExclusiveManager.sub(expectedReceiverBalance);
@@ -6779,8 +6779,8 @@ export default async function suite(): Promise<void> {
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
-            // Then receiver takes 35% of the remaining
-            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            // Then receiver takes 30% of the remaining
+            const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
@@ -6838,7 +6838,7 @@ export default async function suite(): Promise<void> {
             expect(exclusiveManagerBalance).to.be.equal(0);
 
             // Receiver should get 35% of the total amount (no deduction for exclusive manager)
-            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentage).div(maxPercentage);
+            const expectedReceiverBalance = amount.mul(percentages.ReceiverPercentageInExclusiveManagerVersion).div(maxPercentage);
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
             expect(receiverBalance).to.be.closeTo(expectedReceiverBalance.mul(ethers.utils.parseEther("1")).div(wbnbToUsdt), ethers.utils.parseEther("0.01"));
 
