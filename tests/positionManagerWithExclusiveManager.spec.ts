@@ -679,7 +679,7 @@ export default async function suite(): Promise<void> {
 
             await PositionManager.connect(manager).distributeRewards(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -708,12 +708,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -746,7 +746,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -808,7 +808,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -1515,7 +1515,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -1542,12 +1542,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -1580,7 +1580,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -1642,7 +1642,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -2367,7 +2367,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -2394,12 +2394,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -2432,7 +2432,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -2494,7 +2494,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -3225,7 +3225,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -3252,12 +3252,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -3290,7 +3290,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -3352,7 +3352,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -4080,7 +4080,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -4107,12 +4107,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -4145,7 +4145,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -4207,7 +4207,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -4938,7 +4938,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -4965,12 +4965,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -5003,7 +5003,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -5065,7 +5065,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -5796,7 +5796,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -5823,12 +5823,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -5861,7 +5861,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -5923,7 +5923,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
@@ -6648,7 +6648,7 @@ export default async function suite(): Promise<void> {
 
             const receiverBalance = await WBNBContract.balanceOf(receiver.address);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
@@ -6675,12 +6675,12 @@ export default async function suite(): Promise<void> {
 
             expect(user1USDTBalance).to.be.eq(0);
 
-            // Check that exclusive manager received their 15%
+            // Check that exclusive manager received their 5%
             const exclusiveManagerBalance = await USDTContract.balanceOf(exclusiveManagerAddress);
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             expect(exclusiveManagerBalance).to.be.equal(expectedExclusiveManagerAmount);
 
-            // After exclusive manager takes 15%, remaining amount is distributed between receiver and users
+            // After exclusive manager takes 5%, remaining amount is distributed between receiver and users
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
             const expectedReceiverBalance = remainingAfterExclusiveManager.mul(percentages.ReceiverPercentage).div(maxPercentage);
 
@@ -6713,7 +6713,7 @@ export default async function suite(): Promise<void> {
 
             const user1USDTBalance = await USDTContract.balanceOf(user1.address);
 
-            // First, exclusive manager takes 15%
+            // First, exclusive manager takes 5%
             const expectedExclusiveManagerAmount = amount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = amount.sub(expectedExclusiveManagerAmount);
 
@@ -6775,7 +6775,7 @@ export default async function suite(): Promise<void> {
             expect(user3USDTBalance).to.be.eq(0);
             expect(user4USDTBalance).to.be.eq(0);
 
-            // First, exclusive manager takes 15% of total amount
+            // First, exclusive manager takes 5% of total amount
             const expectedExclusiveManagerAmount = totalAmount.mul(exclusiveManagerPercentage).div(maxPercentage);
             const remainingAfterExclusiveManager = totalAmount.sub(expectedExclusiveManagerAmount);
 
