@@ -6,7 +6,7 @@ import { initValues_PositionManagerDistributor, roles, contractAddresses, percen
 const version = "v0.0.0";
 const contractName = "PositionManagerDistributorWithExclusiveManager";
 
-const InitValues = initValues_PositionManagerDistributor.USDT_WBNB;
+let InitValues = initValues_PositionManagerDistributor.USDT_WBNB;
 
 const ExclusiveManager = contractAddresses.ExclusiveManager;
 const ExclusiveManagerFeePercentage =  percentages.ExclusiveManagerPercentage;
@@ -20,6 +20,8 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
     console.log("\nDeploying " + contractName + "...");
 
     console.log(`deployer: ${deployer}`);
+
+    InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
 
     const result = await deploy(contractName, {
         contract: contractName,
@@ -71,13 +73,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
     } catch (error) {}
 
     if(chainId == 31337) {
+      let InitValues = initValues_PositionManagerDistributor.ETH_USDT;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result = await deploy(contractName + "_2", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.ETH_USDT, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
@@ -93,13 +98,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
       await PositionManager.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
 
+      InitValues = initValues_PositionManagerDistributor.ETH_WBNB;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result2 = await deploy(contractName + "_3", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.ETH_WBNB, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
@@ -115,13 +123,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
       await PositionManager2.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
 
+      InitValues = initValues_PositionManagerDistributor.USDT_BTCB;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result3 = await deploy(contractName + "_4", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.USDT_BTCB, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
@@ -137,13 +148,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
       await PositionManager3.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
 
+      InitValues = initValues_PositionManagerDistributor.XRP_WBNB;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result4 = await deploy(contractName + "_5", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.XRP_WBNB, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
@@ -159,13 +173,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
       await PositionManager4.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
 
+      InitValues = initValues_PositionManagerDistributor.USDT_USDC;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result5 = await deploy(contractName + "_6", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.USDT_USDC, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
@@ -181,13 +198,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
       await PositionManager5.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
 
+      InitValues = initValues_PositionManagerDistributor.SOL_WBNB;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result6 = await deploy(contractName + "_7", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.SOL_WBNB, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
@@ -203,13 +223,16 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
 
       await PositionManager6.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
 
+      InitValues = initValues_PositionManagerDistributor.XRP_USDT;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
       const result7 = await deploy(contractName + "_8", {
         contract: contractName,
         from: deployer,
         log: true,
         waitConfirmations: 1,
         args: [
-            initValues_PositionManagerDistributor.XRP_USDT, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
         ],
       });
 
