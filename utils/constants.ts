@@ -42,7 +42,8 @@ export const contractAddresses: any = {
 
 export const percentages: any = {
     ReceiverPercentage: 350000, // 35%
-    ExclusiveManagerPercentage: 50000 // 5%
+    ExclusiveManagerPercentage: 50000, // 5%
+    ReceiverPercentageInExclusiveManagerVersion: 315789 // 31.5789%
 };
 
 export const initValues_PositionManagerDistributor: any = {
