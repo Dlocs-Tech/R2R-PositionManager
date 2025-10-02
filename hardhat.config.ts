@@ -77,11 +77,17 @@ const config: HardhatUserConfig = {
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
   },
   etherscan: {
-    apiKey: {
-      amoy: process.env.AMOY_ETHERSCAN_API_KEY ? process.env.AMOY_ETHERSCAN_API_KEY : "",
-      polygon: process.env.POLYGON_ETHERSCAN_API_KEY ? process.env.POLYGON_ETHERSCAN_API_KEY : "",
-      bsc: process.env.BSC_ETHERSCAN_API_KEY ? process.env.BSC_ETHERSCAN_API_KEY : "",
-    }
+    apiKey: process.env.BSC_ETHERSCAN_API_KEY ? process.env.BSC_ETHERSCAN_API_KEY : "",
+    customChains: [
+    {
+      network: "bsc",
+      chainId: 56,
+      urls: {
+        apiURL: "https://api.etherscan.io/v2/api?chainid=56",
+        browserURL: "https://bscscan.com/"
+      }
+    },
+  ]
   },
   paths: {
     sources: "./contracts",
