@@ -17,5 +17,6 @@
   "PositionManagerDistributor_USDT_WBNB_3v0.0.0": 1746985240,
   "PositionManagerDistributor_ETH_USDT_4v0.0.0": 1752683786,
   "PositionManagerDistributor_USDT_BTCB_4v0.0.0": 1752684142,
-  "PositionManagerDistributorWithExclusiveManager_XRP_USDT_1v0.0.0": 1759277637
+  "PositionManagerDistributorWithExclusiveManager_XRP_USDT_1v0.0.0": 1759277637,
+  "PositionManagerDistributorWithExclusiveManager_ASTER_USDT_1v0.0.0": 1759364416
 }
