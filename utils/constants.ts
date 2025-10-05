@@ -34,6 +34,7 @@ export const contractAddresses: any = {
     Pool_SOL_WBNB: "0xbFFEc96e8f3b5058B1817c14E4380758Fada01EF",
     Pool_USDT_SOL: "0x9F5a0AD81Fe7fD5dFb84EE7A0CFb83967359BD90",
     Pool_ASTER_USDT: "0x7E58f160B5B77b8B24Cd9900C09A3E730215aC47",
+    Pool_XRP_BTCB: "0xe3D9f8eF633666771B7f1995AaEDEB67d1b3c853",
 
     DefaultReceiverAddress: "0xDCE30F31ccf1F19C314b8E41586FfdE58aED96D6",
 
@@ -120,5 +121,13 @@ export const initValues_PositionManagerDistributor: any = {
         pool1Address: ethers.constants.AddressZero,
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentageInExclusiveManagerVersion"],
+    },
+    XRP_BTCB: {
+        dataFeedAddress: contractAddresses["ChainLink_BTCB_USD"],
+        poolAddress: contractAddresses["Pool_XRP_BTCB"],
+        pool0Address: contractAddresses["Pool_XRP_USDT"],
+        pool1Address: contractAddresses["Pool_USDT_BTCB"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
     },
 };
