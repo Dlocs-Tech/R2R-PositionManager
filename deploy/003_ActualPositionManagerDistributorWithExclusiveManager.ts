@@ -73,6 +73,30 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
     } catch (error) {}
 
     if(chainId == 31337) {
+      InitValues = initValues_PositionManagerDistributor.XRP_BTCB;
+      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
+
+      const result1 = await deploy(contractName + "_1", {
+        contract: contractName,
+        from: deployer,
+        log: true,
+        waitConfirmations: 1,
+        args: [
+            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
+        ],
+      });
+
+      console.log(contractName + " deployed to: ", result1.address);
+
+      const PositionManagerDistributor1 = await ethers.getContractAt(contractName, result1.address);
+
+      const PositionManagerAddress1 = await PositionManagerDistributor1.sharesContract();
+
+      console.log("PositionManager deployed to:", PositionManagerAddress1);
+
+      const PositionManager1 = await ethers.getContractAt("PositionManager", PositionManagerAddress1);
+
+      await PositionManager1.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
     }
 
     return true;
