@@ -247,31 +247,6 @@ const deployFunction: DeployFunction = async (hre: HardhatRuntimeEnvironment) =>
       const PositionManager7 = await ethers.getContractAt("PositionManager", PositionManagerAddress7);
 
       await PositionManager7.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
-
-      InitValues = initValues_PositionManagerDistributor.XRP_BTCB;
-      InitValues.receiverFeePercentage = percentages.ReceiverPercentageInExclusiveManagerVersion;
-
-      const result8 = await deploy(contractName + "_9", {
-        contract: contractName,
-        from: deployer,
-        log: true,
-        waitConfirmations: 1,
-        args: [
-            InitValues, contractAddresses["Pool_USDT_WBNB"], ExclusiveManager, ExclusiveManagerFeePercentage
-        ],
-      });
-
-      console.log(contractName + " deployed to: ", result8.address);
-
-      const PositionManagerDistributor8 = await ethers.getContractAt(contractName, result8.address);
-
-      const PositionManagerAddress8 = await PositionManagerDistributor8.sharesContract();
-
-      console.log("PositionManager deployed to:", PositionManagerAddress8);
-
-      const PositionManager8 = await ethers.getContractAt("PositionManager", PositionManagerAddress8);
-
-      await PositionManager8.grantRole(roles.POSITION_MANAGER_ROLE, contractAddresses.Manager);
     }
 
     return true;
