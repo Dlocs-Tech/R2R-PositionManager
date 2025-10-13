@@ -2221,7 +2221,7 @@ export default async function suite(): Promise<void> {
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.eq(amount);
 
             await PositionManager.connect(manager).addLiquidity(minTick, maxTick);
-            
+
             expect(await USDTContract.balanceOf(PositionManager.address)).to.be.closeTo(0, ethers.utils.parseEther("0.3"));
             expect(await BTCBContract.balanceOf(PositionManager.address)).to.be.eq(0);
 
