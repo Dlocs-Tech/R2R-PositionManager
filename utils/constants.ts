@@ -18,6 +18,7 @@ export const contractAddresses: any = {
     XRP: "0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE",
     SOL: "0x570A5D26f7765Ecb712C0924E4De545B89fD43dF",
     ASTER: "0x000Ae314E2A2172a039B26378814C252734f556A",
+    USD1: "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
 
     ChainLink_WBNB_USD: "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
     ChainLink_USDT_USD: "0xB97Ad0E74fa7d920791E90258A6E2085088b4320",
@@ -37,6 +38,8 @@ export const contractAddresses: any = {
     Pool_USDT_SOL: "0x9F5a0AD81Fe7fD5dFb84EE7A0CFb83967359BD90",
     Pool_ASTER_USDT: "0x7E58f160B5B77b8B24Cd9900C09A3E730215aC47",
     Pool_XRP_BTCB: "0xe3D9f8eF633666771B7f1995AaEDEB67d1b3c853",
+    Pool_USDT_USD1: "0x9c4Ee895e4f6Ce07Ada631C508D1306Db7502cCE",
+    Pool_USDC_USD1: "0xB3F27Fe82Bd1e5D7458E02b543CF0C6610fFAD83",
 
     DefaultReceiverAddress: "0xDCE30F31ccf1F19C314b8E41586FfdE58aED96D6",
 
@@ -148,4 +151,12 @@ export const initValues_PositionManagerDistributor: any = {
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
     },
+    USDC_USD1: {
+        dataFeedAddress: contractAddresses["ChainLink_USDT_USD"],
+        poolAddress: contractAddresses["Pool_USDC_USD1"],
+        pool0Address: contractAddresses["Pool_USDT_USDC"],
+        pool1Address: contractAddresses["Pool_USDT_USD1"],
+        receiverAddress: contractAddresses["DefaultReceiverAddress"],
+        receiverFeePercentage: percentages["ReceiverPercentage"],
+    }
 };
