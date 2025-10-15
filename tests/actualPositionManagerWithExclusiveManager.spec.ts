@@ -3040,23 +3040,23 @@ export default async function suite(): Promise<void> {
             expect(await PositionManager.balanceOf(user2.address)).to.be.eq(0);
 
             const user2SOLBalanceInSOL = await SOLContract.balanceOf(user2.address);
-            const user2BTCBBalance = user2SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            const user2SOLBalance = user2SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
             const user2USDTBalance = await USDTContract.balanceOf(user2.address);
-            expect(user2BTCBBalance.add(user2USDTBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
+            expect(user2SOLBalance.add(user2USDTBalance)).to.be.closeTo(amount, ethers.utils.parseEther("1"));
 
             expect(await PositionManager.balanceOf(user3.address)).to.be.eq(0);
 
             const user3SOLBalanceInSOL = await SOLContract.balanceOf(user3.address);
-            const user3BTCBBalance = user3SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            const user3SOLBalance = user3SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
             const user3USDTBalance = await USDTContract.balanceOf(user3.address);
-            expect(user3BTCBBalance.add(user3USDTBalance)).to.be.closeTo(amount, ethers.utils.parseEther("0.7"));
+            expect(user3SOLBalance.add(user3USDTBalance)).to.be.closeTo(amount, ethers.utils.parseEther("0.7"));
 
             expect(await PositionManager.balanceOf(user4.address)).to.be.eq(0);
 
             const user4SOLBalanceInSOL = await SOLContract.balanceOf(user4.address);
-            const user4BTCBBalance = user4SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
+            const user4SOLBalance = user4SOLBalanceInSOL.mul(solToUsdt).div(BigNumber.from(10).pow(18));
             const user4USDTBalance = await USDTContract.balanceOf(user4.address);
-            expect(user4BTCBBalance.add(user4USDTBalance)).to.be.closeTo(amount, ethers.utils.parseEther("0.5"));
+            expect(user4SOLBalance.add(user4USDTBalance)).to.be.closeTo(amount, ethers.utils.parseEther("0.5"));
 
             expect(await PositionManager.totalSupply()).to.be.eq(expectedShares);
         });
