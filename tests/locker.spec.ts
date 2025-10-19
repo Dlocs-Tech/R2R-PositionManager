@@ -44,5 +44,22 @@ export default async function suite(): Promise<void> {
         it("Should lockedToken be set correctly", async () => {
             expect(await locker.lockedToken()).to.equal(await lockedToken.getAddress());
         });
+
+        it("Should allow users to deposit tokens", async () => {
+            const depositAmount = ethers.parseEther("100");
+
+            await lockedToken.mint(depositAmount);
+            await lockedToken.transfer(user1.address, depositAmount);
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
+
+            await expect(locker.connect(user1).deposit(depositAmount)).to.emit(locker, "TokensDeposited").withArgs(user1.address, depositAmount);
+    
+            const lockerBalance = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance).to.equal(depositAmount);
+
+            const balanceLocked = await locker.balancesLocked(user1.address);
+            expect(balanceLocked).to.equal(depositAmount);
+        });
     });
 }
