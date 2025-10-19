@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {ethers, deployments} from "hardhat";
-import {roles, percentages, contractAddresses} from "../utils/constants";
+import {roles, percentages, contractAddresses} from "../../utils/constants";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 import {PositionManagerDistributor, IERC20} from "../typechain";
 import {BigNumber} from "ethers";
