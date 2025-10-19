@@ -1,5 +1,6 @@
 import type { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-dependency-compiler";
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -46,7 +47,13 @@ const config: HardhatUserConfig = {
         browserURL: "https://bscscan.com/"
       }
     }]
-  }
+  },
+  dependencyCompiler: {
+    paths: [
+      "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol",
+      "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
+    ]
+  },
 };
 
 export default config;
