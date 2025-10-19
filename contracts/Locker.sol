@@ -39,7 +39,7 @@ contract Locker is OwnableUpgradeable {
      * @notice Transfers tokens to the contract and records the deposit.
      * @param amount The amount of tokens to be transferred.
      */
-    function depositTokens(uint256 amount) external {
+    function deposit(uint256 amount) external {
         require(amount > 0, InsufficientBalance(msg.sender));
 
         balancesLocked[msg.sender] += amount;
@@ -52,7 +52,7 @@ contract Locker is OwnableUpgradeable {
      * @notice Withdraws tokens from the contract to the owner's address.
      * @param depositor The address of the depositor whose tokens are to be withdrawn.
      */
-    function withdrawTokens(address depositor) external onlyOwner returns (uint256) {
+    function withdraw(address depositor) external onlyOwner returns (uint256) {
         require(balancesLocked[depositor] > 0, InsufficientBalance(depositor));
 
         uint256 amount = balancesLocked[depositor];
