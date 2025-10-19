@@ -4,7 +4,6 @@ import {ethers, ignition} from "hardhat";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {Locker, ERC20Mock} from "../typechain-types";
 import LockerModule from "../ignition/modules/Locker";
-import Locker from "../ignition/modules/Locker";
 
 export default async function suite(): Promise<void> {
     describe("Locker", () => {
