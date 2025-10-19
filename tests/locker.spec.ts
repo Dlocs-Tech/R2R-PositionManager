@@ -61,5 +61,57 @@ export default async function suite(): Promise<void> {
             const balanceLocked = await locker.balancesLocked(user1.address);
             expect(balanceLocked).to.equal(depositAmount);
         });
+
+        it("Should revert if amount to deposit is zero", async () => {
+            await expect(locker.connect(user1).deposit(0)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
+        });
+
+        it("Should user deposit 2 times", async () => {
+            const depositAmount = ethers.parseEther("50");
+
+            await lockedToken.mint(depositAmount * BigInt(2));
+            await lockedToken.transfer(user1.address, depositAmount * BigInt(2));
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount * BigInt(2));
+
+            await locker.connect(user1).deposit(depositAmount);
+
+            const lockerBalance = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance).to.equal(depositAmount);
+
+            const balanceLocked = await locker.balancesLocked(user1.address);
+            expect(balanceLocked).to.equal(depositAmount);
+
+            await locker.connect(user1).deposit(depositAmount);
+    
+            const lockerBalance2 = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance2).to.equal(depositAmount * BigInt(2));
+
+            const balanceLocked2 = await locker.balancesLocked(user1.address);
+            expect(balanceLocked2).to.equal(depositAmount * BigInt(2));
+        });
+
+        it("Should 2 users deposit tokens", async () => {
+            const depositAmount = ethers.parseEther("75");
+
+            await lockedToken.mint(depositAmount * BigInt(2));
+            await lockedToken.transfer(user1.address, depositAmount);
+            await lockedToken.transfer(user2.address, depositAmount);
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
+            await lockedToken.connect(user2).approve(await locker.getAddress(), depositAmount);
+
+            await locker.connect(user1).deposit(depositAmount);
+            await locker.connect(user2).deposit(depositAmount);
+
+            const lockerBalance = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance).to.equal(depositAmount * BigInt(2));
+
+            const balanceLocked1 = await locker.balancesLocked(user1.address);
+            expect(balanceLocked1).to.equal(depositAmount);
+
+            const balanceLocked2 = await locker.balancesLocked(user2.address);
+            expect(balanceLocked2).to.equal(depositAmount);
+        });
     });
 }
