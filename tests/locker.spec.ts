@@ -113,7 +113,7 @@ export default async function suite(): Promise<void> {
             const balanceLocked2 = await locker.balancesLocked(user2.address);
             expect(balanceLocked2).to.equal(depositAmount);
         });
-        
+
         it("Should revert when non-owner tries to withdraw", async () => {
             const depositAmount = ethers.parseEther("100");
 
@@ -228,7 +228,7 @@ export default async function suite(): Promise<void> {
             const ownerBalance = await lockedToken.balanceOf(owner.address);
             expect(ownerBalance).to.equal(depositAmount * BigInt(2));
         });
-        
+
         it("Should allow new owner to withdraw after ownership transfer", async () => {
             const depositAmount = ethers.parseEther("100");
 
