@@ -42,7 +42,7 @@ const config: HardhatUserConfig = {
       blockGasLimit: 140000000, // BSC block gas limit
       forking: {
         url: `${process.env.BSC_RPC_URL}`,
-        blockNumber: 44364882,
+        blockNumber: 63106587,
       },
     },
     amoy: {
