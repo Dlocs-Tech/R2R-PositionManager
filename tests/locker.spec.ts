@@ -144,6 +144,46 @@ export default async function suite(): Promise<void> {
             expect(ownerBalance).to.equal(depositAmount);
         });
 
+        it("Should admin withdraw, then user deposit again, and admin withdraw again", async () => {
+            const depositAmount = ethers.parseEther("120");
+
+            await lockedToken.mint(depositAmount * BigInt(2));
+            await lockedToken.transfer(user1.address, depositAmount * BigInt(2));
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount * BigInt(2));
+
+            await locker.connect(user1).deposit(depositAmount);
+
+            const amountWithdrawn1 = await locker.withdraw.staticCall(user1.address);
+            await expect(locker.withdraw(user1.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
+            expect(amountWithdrawn1).to.equal(depositAmount);
+
+            const lockerBalance1 = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance1).to.equal(0);
+
+            const balanceLocked1 = await locker.balancesLocked(user1.address);
+            expect(balanceLocked1).to.equal(0);
+
+            const ownerBalance1 = await lockedToken.balanceOf(owner.address);
+            expect(ownerBalance1).to.equal(depositAmount);
+
+            // User deposits again
+            await locker.connect(user1).deposit(depositAmount);
+
+            const amountWithdrawn2 = await locker.withdraw.staticCall(user1.address);
+            await expect(locker.withdraw(user1.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
+            expect(amountWithdrawn2).to.equal(depositAmount);
+            
+            const lockerBalance2 = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance2).to.equal(0);
+
+            const balanceLocked2 = await locker.balancesLocked(user1.address);
+            expect(balanceLocked2).to.equal(0);
+
+            const ownerBalance2 = await lockedToken.balanceOf(owner.address);
+            expect(ownerBalance2).to.equal(depositAmount * BigInt(2));
+        });
+
         it("Should admin withdraw tokens deposited by different users", async () => {
             const depositAmount = ethers.parseEther("150");
 
