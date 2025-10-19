@@ -59,7 +59,7 @@ export default async function suite(): Promise<void> {
             await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
 
             await expect(locker.connect(user1).deposit(depositAmount)).to.emit(locker, "TokensDeposited").withArgs(user1.address, depositAmount);
-    
+
             const lockerBalance = await lockedToken.balanceOf(await locker.getAddress());
             expect(lockerBalance).to.equal(depositAmount);
 
@@ -84,7 +84,7 @@ export default async function suite(): Promise<void> {
             expect(balanceLocked).to.equal(depositAmount);
 
             await locker.connect(user1).deposit(depositAmount);
-    
+
             const lockerBalance2 = await lockedToken.balanceOf(await locker.getAddress());
             expect(lockerBalance2).to.equal(depositAmount * BigInt(2));
 
@@ -173,7 +173,7 @@ export default async function suite(): Promise<void> {
             const amountWithdrawn2 = await locker.withdraw.staticCall(user1.address);
             await expect(locker.withdraw(user1.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
             expect(amountWithdrawn2).to.equal(depositAmount);
-            
+
             const lockerBalance2 = await lockedToken.balanceOf(await locker.getAddress());
             expect(lockerBalance2).to.equal(0);
 
