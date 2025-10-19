@@ -14,7 +14,7 @@ contract Locker is OwnableUpgradeable {
 
     event TokensDeposited(address indexed from, uint256 amount);
 
-    event TokensWithdrawn(address indexed to, uint256 amount);
+    event TokensWithdrawn(uint256 amount);
 
     error InsufficientBalance(address depositor);
 
@@ -60,7 +60,7 @@ contract Locker is OwnableUpgradeable {
 
         IERC20(lockedToken).safeTransfer(msg.sender, amount);
 
-        emit TokensWithdrawn(msg.sender, amount);
+        emit TokensWithdrawn(amount);
 
         return amount;
     }
