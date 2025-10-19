@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 // command to execute script:
 // npx hardhat run ./scripts/grantManagerRole.ts --network <network name>
 
-const manager = "";
+const manager = "0xBA627Ab3aB67Fc444297b7Ec13a15F975e796CEf";
 
 export async function main() {
     // Get contract
@@ -12,7 +12,7 @@ export async function main() {
 
     const PositionManagerAddress = await PositionManagerDistributor.sharesContract();
 
-    console.log("PositionManager deployed to:", PositionManagerAddress);
+    console.log("PositionManager:", PositionManagerAddress);
 
     const PositionManager = await ethers.getContractAt("PositionManager", PositionManagerAddress);
 
