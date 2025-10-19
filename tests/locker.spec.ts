@@ -113,6 +113,18 @@ export default async function suite(): Promise<void> {
             const balanceLocked2 = await locker.balancesLocked(user2.address);
             expect(balanceLocked2).to.equal(depositAmount);
         });
+        
+        it("Should revert when non-owner tries to withdraw", async () => {
+            const depositAmount = ethers.parseEther("100");
+
+            await lockedToken.mint(depositAmount);
+            await lockedToken.transfer(user1.address, depositAmount);
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
+            await locker.connect(user1).deposit(depositAmount);
+
+            await expect(locker.connect(user1).withdraw(user1.address)).to.be.revertedWithCustomError(locker, "OwnableUnauthorizedAccount");
+        });
 
         it("Should revert if trying to withdraw with zero balance", async () => {
             await expect(locker.withdraw(user1.address)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
@@ -215,6 +227,31 @@ export default async function suite(): Promise<void> {
 
             const ownerBalance = await lockedToken.balanceOf(owner.address);
             expect(ownerBalance).to.equal(depositAmount * BigInt(2));
+        });
+        
+        it("Should allow new owner to withdraw after ownership transfer", async () => {
+            const depositAmount = ethers.parseEther("100");
+
+            await lockedToken.mint(depositAmount);
+            await lockedToken.transfer(user1.address, depositAmount);
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
+            await locker.connect(user1).deposit(depositAmount);
+
+            // Transfer ownership to user2
+            await locker.transferOwnership(user2.address);
+
+            // Original owner should not be able to withdraw
+            await expect(locker.connect(owner).withdraw(user1.address)).to.be.revertedWithCustomError(locker, "OwnableUnauthorizedAccount");
+
+            // New owner should be able to withdraw
+            const amountWithdrawn = await locker.connect(user2).withdraw.staticCall(user1.address);
+            await expect(locker.connect(user2).withdraw(user1.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
+
+            expect(amountWithdrawn).to.equal(depositAmount);
+
+            const user2Balance = await lockedToken.balanceOf(user2.address);
+            expect(user2Balance).to.equal(depositAmount);
         });
     });
 }
