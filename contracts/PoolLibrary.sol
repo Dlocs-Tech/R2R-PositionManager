@@ -8,7 +8,6 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
  * @notice A contract that allows the owner to store and manage a data associated to pools.
  */
 contract PoolLibrary is OwnableUpgradeable {
-
     event PoolAdded(uint256 indexed poolId, address indexed mainPool);
 
     event PoolUpdated(uint256 indexed poolId, address indexed mainPool);
