@@ -4,6 +4,7 @@ import {ethers, ignition} from "hardhat";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {Locker, ERC20Mock} from "../typechain-types";
 import LockerModule from "../ignition/modules/Locker";
+import Locker from "../ignition/modules/Locker";
 
 export default async function suite(): Promise<void> {
     describe("Locker", () => {
@@ -45,6 +46,10 @@ export default async function suite(): Promise<void> {
             expect(await locker.lockedToken()).to.equal(await lockedToken.getAddress());
         });
 
+        it("Should revert if amount to deposit is zero", async () => {
+            await expect(locker.connect(user1).deposit(0)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
+        });
+
         it("Should allow users to deposit tokens", async () => {
             const depositAmount = ethers.parseEther("100");
 
@@ -60,10 +65,6 @@ export default async function suite(): Promise<void> {
 
             const balanceLocked = await locker.balancesLocked(user1.address);
             expect(balanceLocked).to.equal(depositAmount);
-        });
-
-        it("Should revert if amount to deposit is zero", async () => {
-            await expect(locker.connect(user1).deposit(0)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
         });
 
         it("Should user deposit 2 times", async () => {
@@ -112,6 +113,69 @@ export default async function suite(): Promise<void> {
 
             const balanceLocked2 = await locker.balancesLocked(user2.address);
             expect(balanceLocked2).to.equal(depositAmount);
+        });
+
+        it("Should revert if trying to withdraw with zero balance", async () => {
+            await expect(locker.withdraw(user1.address)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
+        });
+
+        it("Should admin withdraw tokens", async () => {
+            const depositAmount = ethers.parseEther("200");
+
+            await lockedToken.mint(depositAmount);
+            await lockedToken.transfer(user1.address, depositAmount);
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
+
+            await locker.connect(user1).deposit(depositAmount);
+
+            const amountWithdrawn = await locker.withdraw.staticCall(user1.address);
+            await expect(locker.withdraw(user1.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
+
+            expect(amountWithdrawn).to.equal(depositAmount);
+
+            const lockerBalance = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance).to.equal(0);
+
+            const balanceLocked = await locker.balancesLocked(user1.address);
+            expect(balanceLocked).to.equal(0);
+
+            const ownerBalance = await lockedToken.balanceOf(owner.address);
+            expect(ownerBalance).to.equal(depositAmount);
+        });
+
+        it("Should admin withdraw tokens deposited by different users", async () => {
+            const depositAmount = ethers.parseEther("150");
+
+            await lockedToken.mint(depositAmount * BigInt(2));
+            await lockedToken.transfer(user1.address, depositAmount);
+            await lockedToken.transfer(user2.address, depositAmount);
+
+            await lockedToken.connect(user1).approve(await locker.getAddress(), depositAmount);
+            await lockedToken.connect(user2).approve(await locker.getAddress(), depositAmount);
+
+            await locker.connect(user1).deposit(depositAmount);
+            await locker.connect(user2).deposit(depositAmount);
+
+            const amountWithdrawn1 = await locker.withdraw.staticCall(user1.address);
+            await expect(locker.withdraw(user1.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
+            expect(amountWithdrawn1).to.equal(depositAmount);
+
+            const amountWithdrawn2 = await locker.withdraw.staticCall(user2.address);
+            await expect(locker.withdraw(user2.address)).to.emit(locker, "TokensWithdrawn").withArgs(depositAmount);
+            expect(amountWithdrawn2).to.equal(depositAmount);
+
+            const lockerBalance = await lockedToken.balanceOf(await locker.getAddress());
+            expect(lockerBalance).to.equal(0);
+
+            const balanceLocked1 = await locker.balancesLocked(user1.address);
+            expect(balanceLocked1).to.equal(0);
+
+            const balanceLocked2 = await locker.balancesLocked(user2.address);
+            expect(balanceLocked2).to.equal(0);
+
+            const ownerBalance = await lockedToken.balanceOf(owner.address);
+            expect(ownerBalance).to.equal(depositAmount * BigInt(2));
         });
     });
 }
