@@ -18,7 +18,7 @@ contract Locker is ILocker, OwnableUpgradeable {
     address public immutable lockedToken;
 
     /// @notice Mapping of user addresses to their locked token balances.
-    mapping(address => uint256) public balancesLocked;
+    mapping(address => uint256) private _balancesLocked;
 
     constructor(address _lockedToken) {
         lockedToken = _lockedToken;
@@ -53,5 +53,10 @@ contract Locker is ILocker, OwnableUpgradeable {
         emit TokensWithdrawn(amount);
 
         return amount;
+    }
+
+    /// @inheritdoc ILocker
+    function balancesLocked(address depositor) external view returns (uint256) {
+        return _balancesLocked[depositor];
     }
 }

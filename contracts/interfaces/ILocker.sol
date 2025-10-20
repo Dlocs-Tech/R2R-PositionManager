@@ -26,4 +26,11 @@ interface ILocker {
      * @return The amount of tokens withdrawn.
      */
     function withdraw(address depositor) external returns (uint256);
+
+    /**
+     * @notice Returns the locked token balance of a depositor.
+     * @param depositor The address of the depositor.
+     * @return The amount of tokens locked by the depositor.
+     */
+    function balancesLocked(address depositor) external view returns (uint256);
 }
