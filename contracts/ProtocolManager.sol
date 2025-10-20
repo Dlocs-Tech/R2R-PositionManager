@@ -33,12 +33,16 @@ contract ProtocolManager is AccessControlUpgradeable {
 
     error ZeroAddress();
 
-    struct ProtocolManagerStorage {
-        /// @dev Set of users that have deposited per PositionManager
-        mapping (address positionManager => EnumerableSet.AddressSet) _depositors;
+    struct PositionManagerData {
+        /// @dev Set of users that have deposited in the PositionManager
+        EnumerableSet.AddressSet _depositors;
 
-        /// @dev Mapping of the claimeable balances of the users per PositionManager
-        mapping (address positionManager => mapping(address user => uint256)) _claimableBalances;
+        /// @dev Mapping of the claimeable balances of the users
+        mapping(address user => uint256) _claimableBalances;
+    }
+
+    struct ProtocolManagerStorage {
+        mapping (address positionManager => PositionManagerData) _positionManagersData;
 
         /// @dev Locker contract where non-distributed rewards are sent
         ILocker _locker;
@@ -83,7 +87,7 @@ contract ProtocolManager is AccessControlUpgradeable {
     function registerDeposit(address depositor) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
-        $._depositors[msg.sender].add(depositor);
+        $._positionManagersData[msg.sender]._depositors.add(depositor);
 
         // Event not needed since PositionManager emits Deposit event
     }
@@ -91,7 +95,7 @@ contract ProtocolManager is AccessControlUpgradeable {
     function registerWithdraw(address depositor) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
-        $._depositors[msg.sender].remove(depositor);
+        $._positionManagersData[msg.sender]._depositors.remove(depositor);
 
         // Event not needed since PositionManager emits Withdraw event
     }
@@ -142,7 +146,7 @@ contract ProtocolManager is AccessControlUpgradeable {
 
     function collectRewards(address positionManager) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        mapping (address => uint256) storage _userBalances = $._claimableBalances[positionManager];
+        mapping (address => uint256) storage _userBalances = $._positionManagersData[positionManager]._claimableBalances;
 
         uint256 rewards = _userBalances[msg.sender];
 
@@ -157,7 +161,7 @@ contract ProtocolManager is AccessControlUpgradeable {
 
     function claimableRewards(address positionManager, address user) external view returns (uint256) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        return $._claimableBalances[positionManager][user];
+        return $._positionManagersData[positionManager]._claimableBalances[user];
     }
 
     function locker() external view returns (address) {
@@ -172,6 +176,6 @@ contract ProtocolManager is AccessControlUpgradeable {
 
     function usersSet(address positionManager) external view returns (address[] memory) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        return $._depositors[positionManager].values();
+        return $._positionManagersData[positionManager]._depositors.values();
     }
 }
