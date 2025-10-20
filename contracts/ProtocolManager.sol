@@ -41,10 +41,10 @@ contract ProtocolManager is AccessControlUpgradeable {
         mapping (address positionManager => mapping(address user => uint256)) _claimableBalances;
 
         /// @dev Locker contract where non-distributed rewards are sent
-        ILocker locker;
+        ILocker _locker;
 
         /// @dev Pool library contract where pool data is stored
-        IPoolLibrary poolLibrary;
+        IPoolLibrary _poolLibrary;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ProtocolManager")) - 1)) & ~bytes32(uint256(0xff))
@@ -162,12 +162,12 @@ contract ProtocolManager is AccessControlUpgradeable {
 
     function locker() external view returns (address) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        return address($.locker);
+        return address($._locker);
     }
 
     function poolLibrary() external view returns (address) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        return address($.poolLibrary);
+        return address($._poolLibrary);
     }
 
     function usersSet(address positionManager) external view returns (address[] memory) {
