@@ -35,7 +35,7 @@ contract Locker is ILocker, OwnableUpgradeable {
     function deposit(uint256 amount) external {
         require(amount > 0, InsufficientBalance(msg.sender));
 
-        balancesLocked[msg.sender] += amount;
+        _balancesLocked[msg.sender] += amount;
         IERC20(lockedToken).safeTransferFrom(msg.sender, address(this), amount);
 
         emit TokensDeposited(msg.sender, amount);
@@ -43,10 +43,10 @@ contract Locker is ILocker, OwnableUpgradeable {
 
     /// @inheritdoc ILocker
     function withdraw(address depositor) external onlyOwner returns (uint256) {
-        require(balancesLocked[depositor] > 0, InsufficientBalance(depositor));
+        require(_balancesLocked[depositor] > 0, InsufficientBalance(depositor));
 
-        uint256 amount = balancesLocked[depositor];
-        balancesLocked[depositor] = 0;
+        uint256 amount = _balancesLocked[depositor];
+        _balancesLocked[depositor] = 0;
 
         IERC20(lockedToken).safeTransfer(msg.sender, amount);
 
