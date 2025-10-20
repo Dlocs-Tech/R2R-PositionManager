@@ -80,8 +80,8 @@ contract ProtocolManager is AccessControlUpgradeable {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        $.locker = ILocker(_locker);
-        $.poolLibrary = IPoolLibrary(_poolLibrary);
+        $._locker = ILocker(_locker);
+        $._poolLibrary = IPoolLibrary(_poolLibrary);
     }
 
     function registerDeposit(address depositor) external {
