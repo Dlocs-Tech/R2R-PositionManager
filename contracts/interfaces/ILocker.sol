@@ -23,6 +23,7 @@ interface ILocker {
     /**
      * @notice Withdraws tokens from the contract to the owner's address.
      * @param depositor The address of the depositor whose tokens are to be withdrawn.
+     * @return The amount of tokens withdrawn.
      */
     function withdraw(address depositor) external returns (uint256);
 }
