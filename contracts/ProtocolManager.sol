@@ -27,9 +27,13 @@ contract ProtocolManager is AccessControlUpgradeable {
     /// @notice Base token used for rewards distribution
     IERC20 public immutable baseToken;
 
+    event RewardsDistributed(uint256 totalAmount);
+
     event RewardCollected(address indexed user, address indexed positionManager, uint256 amount);
 
     error InsufficientBalance(address depositor, address positionManager);
+
+    error ZeroBalance();
 
     error ZeroAddress();
 
@@ -39,6 +43,12 @@ contract ProtocolManager is AccessControlUpgradeable {
 
         /// @dev Mapping of the claimeable balances of the users
         mapping(address user => uint256) _claimableBalances;
+
+        /// @dev Receiver address for a percentage of the rewards
+        address receiverAddress;
+
+        /// @dev Percentage of the rewards to be sent to the receiver address (1 ether = 100%)
+        uint256 receiverPercentage;
     }
 
     struct ProtocolManagerStorage {
@@ -100,49 +110,47 @@ contract ProtocolManager is AccessControlUpgradeable {
         // Event not needed since PositionManager emits Withdraw event
     }
 
-    // function distributeRewards(address positionManager, address receiverAddress, uint256 receiverPercentage, uint256 amountOutMin) external onlyRole(MANAGER_ROLE) {
-    //     uint256 contractBalance = baseToken.balanceOf(address(this));
+    function distributeRewards(address positionManager) external onlyRole(MANAGER_ROLE) {
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
-    //     if (contractBalance <= usersTotalBalances) revert InvalidEntry(); // To distribute the surplus
+        // Withdraw the tokens from the locker (fails if no balance)
+        uint256 totalAmountToDistribute = $._locker.withdraw(positionManager);
 
-    //     uint256 amountToDistribute = contractBalance - usersTotalBalances;
+        uint256 totalShares = IERC20(positionManager).totalSupply();
 
-    //     uint256 totalShares = sharesContract.totalSupply();
+        PositionManagerData storage pmData = $._positionManagersData[positionManager];
 
-    //     if (totalShares == 0) {
-    //         _swapUsdtAndTransfer(amountToDistribute, amountOutMin, receiverAddress);
+        if (totalShares == 0) {
+            baseToken.safeTransfer(pmData.receiverAddress, totalAmountToDistribute);
+        } else {
+            // Send receiverPercentage of the tokens to receiver
+            uint256 receiverAmount = Math.mulDiv(totalAmountToDistribute, pmData.receiverPercentage, MAX_PERCENTAGE);
 
-    //         emit RewardsDistributed(amountToDistribute);
-    //         return;
-    //     }
+            baseToken.safeTransfer(pmData.receiverAddress, receiverAmount);
 
-    //     // Send receiverPercentage of the tokens to receiver
-    //     uint256 receiverAmount = Math.mulDiv(amountToDistribute, receiverPercentage, MAX_PERCENTAGE);
+            uint256 amountToDistribute = totalAmountToDistribute - receiverAmount;
 
-    //     _swapUsdtAndTransfer(receiverAmount, amountOutMin, receiverAddress);
+            EnumerableSet.AddressSet storage _depositors = pmData._depositors;
 
-    //     amountToDistribute -= receiverAmount;
+            uint256 usersLength = _depositors.length();
 
-    //     uint256 usersLength = _usersSet.length();
+            for (uint256 i; i < usersLength; i++) {
+                address user = _depositors.at(i);
 
-    //     usersTotalBalances += amountToDistribute;
+                // Calculate percentage of the shares over the total supply
+                uint256 userPercentage = Math.mulDiv(IERC20(positionManager).balanceOf(user), MAX_PERCENTAGE, totalShares);
 
-    //     for (uint256 i; i < usersLength; i++) {
-    //         address user = _usersSet.at(i);
+                // Calculate the amount of USDT of that user using the percentage
+                uint256 userUsdt = Math.mulDiv(amountToDistribute, userPercentage, MAX_PERCENTAGE);
 
-    //         // Calculate percentage of the shares over the total supply
-    //         uint256 userPercentage = Math.mulDiv(sharesContract.balanceOf(user), MAX_PERCENTAGE, totalShares);
+                if (userUsdt == 0) continue; // Should never happen
 
-    //         // Calculate the amount of USDT of that user using the percentage
-    //         uint256 userUsdt = Math.mulDiv(amountToDistribute, userPercentage, MAX_PERCENTAGE);
+                pmData._claimableBalances[user] += userUsdt;
+            }
+        }
 
-    //         if (userUsdt == 0) continue; // Should not happen
-
-    //         _balances[user] += userUsdt;
-    //     }
-
-    //     emit RewardsDistributed(amountToDistribute + receiverAmount);
-    // }
+        emit RewardsDistributed(totalAmountToDistribute);
+    }
 
     function collectRewards(address positionManager) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
