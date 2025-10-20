@@ -5,20 +5,16 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import {ILocker} from "./interfaces/ILocker.sol";
+
 /**
  * @title Locker
  * @notice A contract that allows everyone to transfer a specified ERC20 token and only the owner to withdraw them.
  */
-contract Locker is OwnableUpgradeable {
+contract Locker is ILocker, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
-    event TokensDeposited(address indexed from, uint256 amount);
-
-    event TokensWithdrawn(uint256 amount);
-
-    error InsufficientBalance(address depositor);
-
-    /// @notice The address of the ERC20 token that can be locked.
+    /// @inheritdoc ILocker
     address public immutable lockedToken;
 
     /// @notice Mapping of user addresses to their locked token balances.
@@ -35,10 +31,7 @@ contract Locker is OwnableUpgradeable {
         __Ownable_init(msg.sender);
     }
 
-    /**
-     * @notice Transfers tokens to the contract and records the deposit.
-     * @param amount The amount of tokens to be transferred.
-     */
+    /// @inheritdoc ILocker
     function deposit(uint256 amount) external {
         require(amount > 0, InsufficientBalance(msg.sender));
 
@@ -48,10 +41,7 @@ contract Locker is OwnableUpgradeable {
         emit TokensDeposited(msg.sender, amount);
     }
 
-    /**
-     * @notice Withdraws tokens from the contract to the owner's address.
-     * @param depositor The address of the depositor whose tokens are to be withdrawn.
-     */
+    /// @inheritdoc ILocker
     function withdraw(address depositor) external onlyOwner returns (uint256) {
         require(balancesLocked[depositor] > 0, InsufficientBalance(depositor));
 
