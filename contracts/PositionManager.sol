@@ -36,7 +36,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @dev Maximum value for uint128
     uint128 private constant MAX_UINT128 = type(uint128).max;
 
-    IPoolLibrary public poolLibrary;
+    IPoolLibrary.PoolData public poolData;
 
     /// @dev Boolean to indicate if the pool is token0/baseToken (true) or baseToken/token0 (false)
     bool private immutable _pool0Direction;
@@ -110,8 +110,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             uint256 poolPrice = _getPoolTokensPrice();
 
             // If token0 or token1 is baseToken, we need to adjust the amountToken0 or amountToken1
-            if (address(poolLibrary.token0Pool) == address(0)) amountToken0 -= depositAmount;
-            else if (address(poolLibrary.token1Pool) == address(0)) amountToken1 -= depositAmount;
+            if (poolData.token0Pool == address(0)) amountToken0 -= depositAmount;
+            else if (poolData.token1Pool == address(0)) amountToken1 -= depositAmount;
 
             uint256 contractLiqInToken1 = Math.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
@@ -253,7 +253,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
         _swapUsingPool(
-            IPancakeV3Pool(poolLibrary.token1Pool),
+            IPancakeV3Pool(poolData.token1Pool),
             amountToken1,
             _getAmountMin(amountToken1, token1Price, true),
             _pool1Direction, // token1 to baseToken
@@ -265,7 +265,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
         _swapUsingPool(
-            IPancakeV3Pool(poolLibrary.token0Pool),
+            IPancakeV3Pool(poolData.token0Pool),
             amountToken0,
             _getAmountMin(amountOutMin, token1Price, true),
             _pool0Direction, // token0 to baseToken
@@ -382,7 +382,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
         amountToken1 = _swapUsingPool(
-            IPancakeV3Pool(poolLibrary.token1Pool),
+            IPancakeV3Pool(poolData.token1Pool),
             amountToken1,
             _getAmountMin(amountToken1, token1Price, true),
             _pool1Direction, // token1 to baseToken
@@ -394,7 +394,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
         amountToken0 = _swapUsingPool(
-            IPancakeV3Pool(poolLibrary.token0Pool),
+            IPancakeV3Pool(poolData.token0Pool),
             amountToken0,
             _getAmountMin(amountOutMin, token1Price, true),
             _pool0Direction, // token0 to baseToken
@@ -420,7 +420,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             uint256 amount0ToSwap = amountToken0 - Math.mulDiv(contractLiqInToken0, token0Percentage, PRECISION);
 
             _swapUsingPool(
-                IPancakeV3Pool(poolLibrary.mainPool),
+                IPancakeV3Pool(poolData.mainPool),
                 amount0ToSwap,
                 _getAmountMin(amount0ToSwap, poolPrice * CHAINLINK_PRECISION, true), // poolPrice is adjusted to have same precision as chainlink price
                 true, // token0 to token1
@@ -431,7 +431,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             uint256 amount1ToSwap = amountToken1 - Math.mulDiv(contractLiqInToken1, token1Percentage, PRECISION);
 
             _swapUsingPool(
-                IPancakeV3Pool(poolLibrary.mainPool),
+                IPancakeV3Pool(poolData.mainPool),
                 amount1ToSwap,
                 _getAmountMin(amount1ToSwap, poolPrice * CHAINLINK_PRECISION, false), // poolPrice is adjusted to have same precision as chainlink price
                 false, // token1 to token0
@@ -448,7 +448,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         // Swap baseToken to token0
         _swapUsingPool(
-            IPancakeV3Pool(poolLibrary.token0Pool),
+            IPancakeV3Pool(poolData.token0Pool),
             amountToSwapToToken0,
             _getAmountMin(amountToSwapToToken0, token0Price, false),
             !_pool0Direction, // baseToken to token0
@@ -459,7 +459,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         // Swap baseToken to token1
         _swapUsingPool(
-            IPancakeV3Pool(poolLibrary.token1Pool),
+            IPancakeV3Pool(poolData.token1Pool),
             amountToSwapToToken1,
             _getAmountMin(amountToSwapToToken1, token1Price, false),
             !_pool1Direction, // baseToken to token1
@@ -485,14 +485,14 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         // Flip minting to true and call the pool to mint the liquidity
         _minting = true;
 
-        IPancakeV3Pool(poolLibrary.mainPool).mint(address(this), _tickLower, _tickUpper, liquidity, "");
+        IPancakeV3Pool(poolData.mainPool).mint(address(this), _tickLower, _tickUpper, liquidity, "");
     }
 
     /// @notice Burns liquidity from the position
     function _burnLiquidity(int24 tickLower, int24 tickUpper, uint128 liquidity) private {
         if (liquidity > 0) {
             // Burn liquidity
-            IPancakeV3Pool(poolLibrary.mainPool).burn(tickLower, tickUpper, liquidity);
+            IPancakeV3Pool(poolData.mainPool).burn(tickLower, tickUpper, liquidity);
 
             // Collect amount owed
             _collect();
@@ -503,10 +503,10 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         uint128 liquidity = _liquidity(_tickLower, _tickUpper);
 
         // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
-        if (liquidity > 0) IPancakeV3Pool(poolLibrary.mainPool).burn(_tickLower, _tickUpper, 0);
+        if (liquidity > 0) IPancakeV3Pool(poolData.mainPool).burn(_tickLower, _tickUpper, 0);
 
         // the actual amounts collected are returned
-        IPancakeV3Pool(poolLibrary.mainPool).collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
+        IPancakeV3Pool(poolData.mainPool).collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
     }
 
     function _getPoolTokensPrice() private view returns (uint256) {
@@ -519,7 +519,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     function _priceAndTick() private view returns (uint160 sqrtPriceX96, int24 tick) {
-        (sqrtPriceX96, tick, , , , , ) = IPancakeV3Pool(poolLibrary.mainPool).slot0();
+        (sqrtPriceX96, tick, , , , , ) = IPancakeV3Pool(poolData.mainPool).slot0();
     }
 
     function _getTotalAmounts() private view returns (uint256 total0, uint256 total1) {
@@ -538,9 +538,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     function _getChainlinkPrice() private view returns (uint256) {
-        (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(poolLibrary.chainlinkDataFeed).latestRoundData();
+        (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(poolData.chainlinkDataFeed).latestRoundData();
 
-        if (price <= 0 || block.timestamp - poolLibrary.chainlinkTimeInterval > updatedAt) revert InvalidInput();
+        if (price <= 0 || block.timestamp - poolData.chainlinkTimeInterval > updatedAt) revert InvalidInput();
 
         return uint256(price);
     }
@@ -584,7 +584,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     function _liquidity(int24 tickLower, int24 tickUpper) private view returns (uint128 liquidity) {
         bytes32 positionKey = keccak256(abi.encodePacked(address(this), tickLower, tickUpper));
-        (liquidity, , , , ) = IPancakeV3Pool(poolLibrary.mainPool).positions(positionKey);
+        (liquidity, , , , ) = IPancakeV3Pool(poolData.mainPool).positions(positionKey);
     }
 
     function _uint128Safe(uint256 x) private pure returns (uint128) {
@@ -595,24 +595,24 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// Callback functions
 
     function pancakeswapV3MintCallback(uint256 amount0, uint256 amount1, bytes memory /*data*/) external {
-        if (msg.sender != poolLibrary.mainPool) revert NotPool();
+        if (msg.sender != poolData.mainPool) revert NotPool();
         if (!_minting) revert InvalidInput();
 
-        if (amount0 > 0) _token0.safeTransfer(poolLibrary.mainPool, amount0);
-        if (amount1 > 0) _token1.safeTransfer(poolLibrary.mainPool, amount1);
+        if (amount0 > 0) _token0.safeTransfer(poolData.mainPool, amount0);
+        if (amount1 > 0) _token1.safeTransfer(poolData.mainPool, amount1);
 
         _minting = false;
     }
 
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
-        if (msg.sender != poolLibrary.mainPool && msg.sender != poolLibrary.token0Pool && msg.sender != poolLibrary.token1Pool) revert NotPool();
+        if (msg.sender != poolData.mainPool && msg.sender != poolData.token0Pool && msg.sender != poolData.token1Pool) revert NotPool();
 
         if (amount0Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token0()).safeTransfer(msg.sender, uint256(amount0Delta));
         else if (amount1Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token1()).safeTransfer(msg.sender, uint256(amount1Delta));
     }
 
     function pancakeV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata /*data*/) external {
-        if (msg.sender != poolLibrary.mainPool) revert NotPool();
+        if (msg.sender != poolData.mainPool) revert NotPool();
 
         if (amount0Owed > 0) _token0.safeTransfer(msg.sender, uint256(amount0Owed));
         if (amount1Owed > 0) _token1.safeTransfer(msg.sender, uint256(amount1Owed));
