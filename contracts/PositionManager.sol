@@ -45,18 +45,18 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     
     /// @dev Pool related data
     IPoolLibrary.PoolData public poolData;
-    
+
     /// @dev Boolean to indicate if the pool is token0/baseToken (true) or baseToken/token0 (false)
-    bool private immutable _pool0Direction;
+    bool private _pool0Direction;
 
     /// @dev Boolean to indicate if the pool is token1/baseToken (true) or baseToken/token1 (false)
-    bool private immutable _pool1Direction;
+    bool private _pool1Direction;
 
     /// @dev Token0 of the pool
-    IERC20 private immutable _token0;
+    IERC20 private _token0;
 
     /// @dev Token1 of the pool
-    IERC20 private immutable _token1;
+    IERC20 private _token1;
 
     /// @dev Max slippage percentage allowed in swaps (1 ether = 100%)
     uint256 private _slippage = 1e17; // 10%
@@ -206,7 +206,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             }
         } else {
             // Contract is not in position
-            // Calculate the contract balance in token1
+            // Calculate the contract balance in baseToken
             uint256 contractAmount = baseToken.balanceOf(address(this));
 
             // Calculate the amount of baseToken to send to the user
@@ -339,6 +339,26 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         _addLiquidity();
 
         emit LiquidityAdded(_tickLower, _tickUpper);
+    }
+
+    function changePoolData(uint256 poolId) external onlyRole(_protocolManager.MANAGER_ROLE()) {
+        // Only change pool data if the contract is not in position
+        if (_tickLower != _tickUpper) revert InvalidInput();
+
+        IPoolLibrary poolLibrary = IPoolLibrary(_protocolManager.poolLibrary());
+
+        poolData = poolLibrary.getPoolData(poolId);
+
+        // Determine pool0 direction
+        if (poolData.token0Pool != address(0) && IPancakeV3Pool(poolData.token0Pool).token1() == address(baseToken)) _pool0Direction = true;
+
+        // Determine pool1 direction
+        if (poolData.token1Pool != address(0) && IPancakeV3Pool(poolData.token1Pool).token1() == address(baseToken)) _pool1Direction = true;
+
+        _token0 = IERC20(IPancakeV3Pool(poolData.mainPool).token0());
+        _token1 = IERC20(IPancakeV3Pool(poolData.mainPool).token1());
+
+        emit PoolDataChanged(poolId);
     }
 
     /// @inheritdoc IPositionManager
