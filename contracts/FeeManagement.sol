@@ -10,7 +10,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
  * @dev Contract that charges a specific amount of fee (in base token) on deposit
  * NOTE: If the deposit amount is too small, rounding errors may occur
  */
-contract FeeManagement {
+abstract contract FeeManagement {
     using SafeERC20 for IERC20;
 
     /// @notice Maximum percentage value (1 ether = 100%)
