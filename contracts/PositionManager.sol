@@ -36,23 +36,27 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /// @dev Maximum value for uint128
     uint128 private constant MAX_UINT128 = type(uint128).max;
+    
+    /// @dev Protocol manager address
+    IProtocolManager private immutable _protocolManager;
 
+    /// @dev Locker contract address that will receive non-distributed rewards
+    address private immutable _locker;
+    
+    /// @dev Pool related data
+    IPoolLibrary.PoolData public poolData;
+    
     /// @dev Boolean to indicate if the pool is token0/baseToken (true) or baseToken/token0 (false)
     bool private immutable _pool0Direction;
 
     /// @dev Boolean to indicate if the pool is token1/baseToken (true) or baseToken/token1 (false)
     bool private immutable _pool1Direction;
 
-    /// @dev Protocol manager address
-    IProtocolManager private immutable _protocolManager;
-
     /// @dev Token0 of the pool
     IERC20 private immutable _token0;
 
     /// @dev Token1 of the pool
     IERC20 private immutable _token1;
-    
-    IPoolLibrary.PoolData public poolData;
 
     /// @dev Max slippage percentage allowed in swaps (1 ether = 100%)
     uint256 private _slippage = 1e17; // 10%
@@ -92,11 +96,15 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         baseToken = IERC20(_baseToken);
 
         _protocolManager = IProtocolManager(msg.sender);
+
+        _locker = _protocolManager.locker();
     }
 
     /// @inheritdoc IPositionManager
-    function deposit(uint256 depositAmount) external returns (uint256 shares) {
+    function deposit(uint256 depositAmount) external nonReentrant returns (uint256 shares) {
         if (depositAmount < minDepositAmount) revert InvalidInput();
+
+        _protocolManager.registerDeposit(msg.sender);
 
         // Transfer baseToken from user to contract
         baseToken.safeTransferFrom(msg.sender, address(this), depositAmount);
@@ -169,6 +177,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         uint256 shares = balanceOf(msg.sender);
 
         if (shares == 0) revert InsufficientBalance();
+
+        _protocolManager.registerWithdraw(msg.sender);
 
         // Contract is in position
         if (_tickLower != _tickUpper) {
@@ -409,7 +419,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool0Direction
         );
 
-        if (amountToken0 + amountToken1 > 0) baseToken.safeTransfer(address(_protocolManager), amountToken0 + amountToken1);
+        if (amountToken0 + amountToken1 > 0) baseToken.safeTransfer(_locker, amountToken0 + amountToken1);
     }
 
     /// @dev Balances the contract tokens to maintain the proportion of token0 and token1 in the pool
