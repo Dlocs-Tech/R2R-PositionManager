@@ -11,6 +11,7 @@ import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancake
 import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
 import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
 
+import {IProtocolManager, IAccessControl} from "./interfaces/IProtocolManager.sol";
 import {IPositionManager} from "./interfaces/IPositionManager.sol";
 import {IPoolLibrary} from "./interfaces/IPoolLibrary.sol";
 import {FeeManagement} from "./FeeManagement.sol";
@@ -43,7 +44,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     bool private immutable _pool1Direction;
 
     /// @dev Protocol manager address
-    address private immutable _protocolManager;
+    IProtocolManager private immutable _protocolManager;
 
     /// @dev Token0 of the pool
     IERC20 private immutable _token0;
@@ -69,6 +70,15 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     bool private _minting;
 
     /**
+     * @notice Modifier that checks if the caller has the specified role
+     * @param role Role to check
+     */
+    modifier onlyRole(bytes32 role) {
+        if (!_protocolManager.hasRole(role, msg.sender)) revert IAccessControl.AccessControlUnauthorizedAccount(msg.sender, role);
+        _;
+    }
+
+    /**
      * @notice Constructor
      * @param _baseToken Address of the base token
      */
@@ -81,9 +91,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         baseToken = IERC20(_baseToken);
 
-        _protocolManager = msg.sender;
-
-        // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _protocolManager = IProtocolManager(msg.sender);
     }
 
     /// @inheritdoc IPositionManager
@@ -203,7 +211,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function addLiquidity(int24 tickLower, int24 tickUpper) external {
+    function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only add liquidity if the contract is not in position
         if (_tickLower != _tickUpper) revert InvalidInput();
 
@@ -237,7 +245,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function removeLiquidity() external {
+    function removeLiquidity() external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only remove liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidInput();
 
@@ -279,7 +287,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function updatePosition(int24 tickLower, int24 tickUpper) external {
+    function updatePosition(int24 tickLower, int24 tickUpper) external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only update position if the contract is in position and new ticks are okay
         if (_tickLower == _tickUpper) revert InvalidInput();
         if (tickLower > tickUpper) revert InvalidInput();
@@ -347,7 +355,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function setSlippage(uint256 slippage) external {
+    function setSlippage(uint256 slippage) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
         if (slippage > MAX_PERCENTAGE) revert InvalidInput();
 
         _slippage = slippage;
@@ -356,14 +364,14 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function setMinDepositAmount(uint256 minimumDepositAmount) external {
+    function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
         minDepositAmount = minimumDepositAmount;
 
         emit MinDepositAmountUpdated(minimumDepositAmount);
     }
 
     /// @inheritdoc IPositionManager
-    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external {
+    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
         _setFee(depositFeePercentage, feeReceiverAddress);
     }
 
@@ -401,7 +409,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool0Direction
         );
 
-        if (amountToken0 + amountToken1 > 0) baseToken.safeTransfer(_protocolManager, amountToken0 + amountToken1);
+        if (amountToken0 + amountToken1 > 0) baseToken.safeTransfer(address(_protocolManager), amountToken0 + amountToken1);
     }
 
     /// @dev Balances the contract tokens to maintain the proportion of token0 and token1 in the pool
