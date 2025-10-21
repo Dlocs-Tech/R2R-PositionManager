@@ -11,6 +11,8 @@ interface IPoolLibrary {
 
     error InvalidPoolId(uint256 poolId);
 
+    error InvalidInput();
+
     /**
      * @notice Structure to hold pool data.
      * @param mainPool The address of the main pool.

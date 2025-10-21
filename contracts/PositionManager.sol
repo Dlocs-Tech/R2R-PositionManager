@@ -355,9 +355,10 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         if (
             poolData.chainlinkDataFeed == address(0) ||
+            poolData.chainlinkTimeInterval == 0 ||
             poolData.mainPool == address(0) ||
             (poolData.token0Pool == address(0) && poolData.token1Pool == address(0))
-        ) revert InvalidInput();
+        ) revert InvalidInput(); // Shouldn't happen
 
         // Determine pool0 direction
         if (poolData.token0Pool != address(0) && IPancakeV3Pool(poolData.token0Pool).token1() == address(baseToken)) _pool0Direction = true;
