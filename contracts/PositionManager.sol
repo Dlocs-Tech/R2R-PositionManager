@@ -8,8 +8,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
 import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
-import {TickMath} from "@pancakeswap/v3-core/contracts/libraries/TickMath.sol";
-import {LiquidityAmounts} from "@pancakeswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
+import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
+import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
 
 import {IPositionManager} from "./interfaces/IPositionManager.sol";
 import {IPoolLibrary} from "./interfaces/IPoolLibrary.sol";
@@ -79,11 +79,11 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             _baseToken == address(0)
         ) revert InvalidInput();
 
-        _baseToken = IERC20(_baseToken);
+        baseToken = IERC20(_baseToken);
 
         _protocolManager = msg.sender;
 
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        // _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /// @inheritdoc IPositionManager
@@ -91,7 +91,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         if (depositAmount < minDepositAmount) revert InvalidInput();
 
         // Transfer baseToken from user to contract
-        _baseToken.safeTransferFrom(sender, address(this), depositAmount);
+        baseToken.safeTransferFrom(msg.sender, address(this), depositAmount);
 
         depositAmount = _chargeDepositFee(depositAmount);
 
@@ -110,8 +110,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             uint256 poolPrice = _getPoolTokensPrice();
 
             // If token0 or token1 is baseToken, we need to adjust the amountToken0 or amountToken1
-            if (address(_pool0) == address(0)) amountToken0 -= depositAmount;
-            else if (address(_pool1) == address(0)) amountToken1 -= depositAmount;
+            if (address(poolLibrary.token0Pool) == address(0)) amountToken0 -= depositAmount;
+            else if (address(poolLibrary.token1Pool) == address(0)) amountToken1 -= depositAmount;
 
             uint256 contractLiqInToken1 = Math.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
@@ -143,7 +143,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             shares = Math.mulDiv(depositAmount, token1Price, PRECISION);
 
             if (totalSupply() > 0) {
-                uint256 contractAmount = _baseToken.balanceOf(address(this)) - depositAmount;
+                uint256 contractAmount = baseToken.balanceOf(address(this)) - depositAmount;
 
                 uint256 token1ContractAmount = Math.mulDiv(contractAmount, token1Price, PRECISION);
 
@@ -151,13 +151,13 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             }
         }
 
-        _mint(sender, shares);
+        _mint(msg.sender, shares);
 
-        emit Deposit(sender, shares, depositAmount);
+        emit Deposit(msg.sender, shares, depositAmount);
     }
 
     /// @inheritdoc IPositionManager
-    function withdraw(address sender) external onlyFactory nonReentrant {
+    function withdraw(address sender) external nonReentrant {
         uint256 shares = balanceOf(sender);
 
         if (shares == 0) revert InsufficientBalance();
@@ -189,12 +189,12 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         } else {
             // Contract is not in position
             // Calculate the contract balance in token1
-            uint256 contractAmount = _baseToken.balanceOf(address(this));
+            uint256 contractAmount = baseToken.balanceOf(address(this));
 
             // Calculate the amount of baseToken to send to the user
             uint256 userBaseTokenAmount = Math.mulDiv(contractAmount, shares, totalSupply());
 
-            _baseToken.safeTransfer(sender, userBaseTokenAmount);
+            baseToken.safeTransfer(sender, userBaseTokenAmount);
         }
 
         _burn(sender, shares);
@@ -203,9 +203,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
+    function addLiquidity(int24 tickLower, int24 tickUpper) external {
         // Only add liquidity if the contract is not in position
-        if (_tickLower != _tickUpper) revert InvalidEntry();
+        if (_tickLower != _tickUpper) revert InvalidInput();
 
         if (tickLower > tickUpper) revert InvalidInput();
 
@@ -215,9 +215,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         // Harvest to collect fees
         _harvest();
 
-        uint256 baseTokenAmount = _baseToken.balanceOf(address(this));
+        uint256 baseTokenAmount = baseToken.balanceOf(address(this));
 
-        if (baseTokenAmount == 0) revert InvalidEntry();
+        if (baseTokenAmount == 0) revert InvalidInput();
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
@@ -237,7 +237,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function removeLiquidity() external onlyRole(MANAGER_ROLE) {
+    function removeLiquidity() external {
         // Only remove liquidity if the contract is in position
         if (_tickLower == _tickUpper) revert InvalidInput();
 
@@ -279,9 +279,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function updatePosition(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
+    function updatePosition(int24 tickLower, int24 tickUpper) external {
         // Only update position if the contract is in position and new ticks are okay
-        if (_tickLower == _tickUpper) revert InvalidEntry();
+        if (_tickLower == _tickUpper) revert InvalidInput();
         if (tickLower > tickUpper) revert InvalidInput();
 
         // Harvest to collect fees
@@ -307,7 +307,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @inheritdoc IPositionManager
     function reAddLiquidity() external {
         // Only re add liquidity if the contract is in position
-        if (_tickLower == _tickUpper) revert InvalidEntry();
+        if (_tickLower == _tickUpper) revert InvalidInput();
 
         // Harvest to collect fees
         _harvest();
@@ -321,11 +321,6 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         _addLiquidity();
 
         emit LiquidityAdded(_tickLower, _tickUpper);
-    }
-
-    /// @inheritdoc IPositionManager
-    function distributeRewards(uint256 amountOutMin) external onlyRole(MANAGER_ROLE) {
-        IPositionManagerDistributor(_factory).distributeRewards(receiverAddress, receiverPercentage, amountOutMin);
     }
 
     /// @inheritdoc IPositionManager
@@ -352,7 +347,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function setReceiverData(address receiverAddress_, uint256 receiverFeePercentage_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setReceiverData(address receiverAddress_, uint256 receiverFeePercentage_) external {
         if (receiverFeePercentage_ > MAX_PERCENTAGE || receiverFeePercentage_ == 0 || receiverAddress_ == address(0)) revert InvalidInput();
 
         receiverAddress = receiverAddress_;
@@ -362,7 +357,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function setSlippage(uint256 slippage) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setSlippage(uint256 slippage) external {
         if (slippage > MAX_PERCENTAGE) revert InvalidInput();
 
         _slippage = slippage;
@@ -371,14 +366,14 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMinDepositAmount(uint256 minimumDepositAmount) external {
         minDepositAmount = minimumDepositAmount;
 
         emit MinDepositAmountUpdated(minimumDepositAmount);
     }
 
     /// @inheritdoc IPositionManager
-    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external {
         _setFee(depositFeePercentage, feeReceiverAddress);
     }
 
@@ -416,7 +411,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool0Direction
         );
 
-        if (amountToken0 + amountToken1 > 0) _baseToken.safeTransfer(_factory, amountToken0 + amountToken1);
+        if (amountToken0 + amountToken1 > 0) baseToken.safeTransfer(_factory, amountToken0 + amountToken1);
     }
 
     /// @dev Balances the contract tokens to maintain the proportion of token0 and token1 in the pool
@@ -611,7 +606,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     function pancakeswapV3MintCallback(uint256 amount0, uint256 amount1, bytes memory /*data*/) external {
         if (msg.sender != address(_pool)) revert NotPool();
-        if (!_minting) revert InvalidEntry();
+        if (!_minting) revert InvalidInput();
 
         if (amount0 > 0) _token0.safeTransfer(address(_pool), amount0);
         if (amount1 > 0) _token1.safeTransfer(address(_pool), amount1);
