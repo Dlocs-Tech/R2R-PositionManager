@@ -11,4 +11,10 @@ interface IProtocolManager is IAccessControl {
     function MANAGER_ROLE() external view returns (bytes32);
 
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
+
+    function registerDeposit(address depositor) external;
+
+    function registerWithdraw(address depositor) external;
+
+    function locker() external view returns (address);
 }
