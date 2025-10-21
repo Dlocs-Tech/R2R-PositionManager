@@ -157,8 +157,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function withdraw(address sender) external nonReentrant {
-        uint256 shares = balanceOf(sender);
+    function withdraw() external nonReentrant {
+        uint256 shares = balanceOf(msg.sender);
 
         if (shares == 0) revert InsufficientBalance();
 
@@ -175,8 +175,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             uint256 userAmount0 = Math.mulDiv(amountToken0, shares, totalSupply());
             uint256 userAmount1 = Math.mulDiv(amountToken1, shares, totalSupply());
 
-            if (userAmount0 > 0) _token0.safeTransfer(sender, userAmount0);
-            if (userAmount1 > 0) _token1.safeTransfer(sender, userAmount1);
+            if (userAmount0 > 0) _token0.safeTransfer(msg.sender, userAmount0);
+            if (userAmount1 > 0) _token1.safeTransfer(msg.sender, userAmount1);
 
             if (totalSupply() == shares)
                 _tickLower = _tickUpper = 0; // Set the contract to not in position
@@ -194,12 +194,12 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             // Calculate the amount of baseToken to send to the user
             uint256 userBaseTokenAmount = Math.mulDiv(contractAmount, shares, totalSupply());
 
-            baseToken.safeTransfer(sender, userBaseTokenAmount);
+            baseToken.safeTransfer(msg.sender, userBaseTokenAmount);
         }
 
-        _burn(sender, shares);
+        _burn(msg.sender, shares);
 
-        emit Withdraw(sender, shares);
+        emit Withdraw(msg.sender, shares);
     }
 
     /// @inheritdoc IPositionManager
