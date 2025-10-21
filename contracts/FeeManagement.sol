@@ -22,6 +22,9 @@ abstract contract FeeManagement {
     /// @dev Error thrown when an invalid input is provided
     error InvalidInput();
 
+    /// @dev Error thrown when the fee receiver is not set
+    error FeeReceiverNotSet();
+
     /// @notice Event emitted when the fee is changed
     event FeeChanged(uint256 depositFee, address feeReceiver);
 
@@ -39,7 +42,7 @@ abstract contract FeeManagement {
 
     /// @dev Should be called by the derived contract with access control
     function _setFee(uint256 depositFeePercentage, address feeReceiverAddress) internal {
-        if (depositFeePercentage > MAX_FEE_PERCENTAGE) revert InvalidInput();
+        require(depositFeePercentage <= MAX_FEE_PERCENTAGE, InvalidInput());
 
         depositFee = depositFeePercentage;
         feeReceiver = feeReceiverAddress;
@@ -57,6 +60,8 @@ abstract contract FeeManagement {
 
     function _chargeFee(uint256 fee) private {
         if (fee > 0) {
+            require(feeReceiver != address(0), FeeReceiverNotSet());
+
             baseToken.safeTransfer(feeReceiver, fee);
 
             emit FeeCharged(fee);
