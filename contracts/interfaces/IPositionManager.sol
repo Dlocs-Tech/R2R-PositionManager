@@ -51,6 +51,12 @@ interface IPositionManager {
     event PositionUpdated(int24 tickLower, int24 tickUpper);
 
     /**
+     * @notice Event emitted when the pool data is changed
+     * @param poolId ID of the pool
+     */
+    event PoolDataChanged(uint256 poolId);
+
+    /**
      * @notice Event emitted when the receiver address and fee percentage are updated
      * @param receiverAddress Address of the receiver of the fees
      * @param receiverFeePercentage Percentage of the funds destined to the receiver
