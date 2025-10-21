@@ -17,4 +17,6 @@ interface IProtocolManager is IAccessControl {
     function registerWithdraw(address depositor) external;
 
     function locker() external view returns (address);
+
+    function poolLibrary() external view returns (address);
 }
