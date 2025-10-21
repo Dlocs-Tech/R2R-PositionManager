@@ -111,8 +111,8 @@ contract ProtocolManager is AccessControlUpgradeable {
         // Event not needed since PositionManager emits Withdraw event
     }
 
-    function deployPositionManager(address receiverAddress, uint256 receiverPercentage) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address) {
-        PositionManager pm = new PositionManager(address(baseToken));
+    function deployPositionManager(address receiverAddress, uint256 receiverPercentage, uint256 initialPoolId) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address) {
+        PositionManager pm = new PositionManager(address(baseToken), initialPoolId);
 
         PositionManagerData storage pmData = _getProtocolManagerStorage()._positionManagersData[address(pm)];
         pmData.receiverAddress = receiverAddress;

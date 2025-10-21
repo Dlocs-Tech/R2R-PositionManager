@@ -85,13 +85,17 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /**
      * @notice Constructor
      * @param _baseToken Address of the base token
+     * @param poolId ID of the initial pool to set
      */
     constructor(
-        address _baseToken
+        address _baseToken,
+        uint256 poolId
     ) ERC20("PositionManager", "PM") {
         if (
             _baseToken == address(0)
         ) revert InvalidInput();
+
+        changePoolData(poolId);
 
         baseToken = IERC20(_baseToken);
 
@@ -341,13 +345,19 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         emit LiquidityAdded(_tickLower, _tickUpper);
     }
 
-    function changePoolData(uint256 poolId) external onlyRole(_protocolManager.MANAGER_ROLE()) {
+    function changePoolData(uint256 poolId) public onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only change pool data if the contract is not in position
         if (_tickLower != _tickUpper) revert InvalidInput();
 
         IPoolLibrary poolLibrary = IPoolLibrary(_protocolManager.poolLibrary());
 
         poolData = poolLibrary.getPoolData(poolId);
+
+        if (
+            poolData.chainlinkDataFeed == address(0) ||
+            poolData.mainPool == address(0) ||
+            (poolData.token0Pool == address(0) && poolData.token1Pool == address(0))
+        ) revert InvalidInput();
 
         // Determine pool0 direction
         if (poolData.token0Pool != address(0) && IPancakeV3Pool(poolData.token0Pool).token1() == address(baseToken)) _pool0Direction = true;
