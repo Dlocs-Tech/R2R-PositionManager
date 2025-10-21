@@ -36,8 +36,6 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @dev Maximum value for uint128
     uint128 private constant MAX_UINT128 = type(uint128).max;
 
-    IPoolLibrary.PoolData public poolData;
-
     /// @dev Boolean to indicate if the pool is token0/baseToken (true) or baseToken/token0 (false)
     bool private immutable _pool0Direction;
 
@@ -52,12 +50,14 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /// @dev Token1 of the pool
     IERC20 private immutable _token1;
+    
+    IPoolLibrary.PoolData public poolData;
 
     /// @dev Max slippage percentage allowed in swaps (1 ether = 100%)
     uint256 private _slippage = 1e17; // 10%
 
     /// @notice Minimum baseToken deposit amount
-    uint256 public minDepositAmount = 10e18; // 10 baseToken
+    uint256 public minDepositAmount = 10 ether; // 10 baseToken
 
     /// @dev Lower tick of the position
     int24 private _tickLower;
