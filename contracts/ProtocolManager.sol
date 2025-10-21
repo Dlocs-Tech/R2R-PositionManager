@@ -9,6 +9,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 
 import {ILocker} from "./interfaces/ILocker.sol";
 import {IPoolLibrary} from "./interfaces/IPoolLibrary.sol";
+import {PositionManager} from "./PositionManager.sol";
 
 /**
  * @title ProtocolManager
@@ -110,7 +111,17 @@ contract ProtocolManager is AccessControlUpgradeable {
         // Event not needed since PositionManager emits Withdraw event
     }
 
-    function distributeRewards(address positionManager) external onlyRole(MANAGER_ROLE) {
+    function deployPositionManager(address receiverAddress, uint256 receiverPercentage) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address) {
+        PositionManager pm = new PositionManager(address(baseToken));
+
+        PositionManagerData storage pmData = _getProtocolManagerStorage()._positionManagersData[address(pm)];
+        pmData.receiverAddress = receiverAddress;
+        pmData.receiverPercentage = receiverPercentage;
+
+        return address(pm);
+    }
+
+    function distributeRewards(address positionManager) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
         // Withdraw the tokens from the locker (fails if no balance)
