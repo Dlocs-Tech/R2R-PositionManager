@@ -9,11 +9,10 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 
 import {ILocker} from "./interfaces/ILocker.sol";
 import {IPoolLibrary} from "./interfaces/IPoolLibrary.sol";
-import {PositionManager} from "./PositionManager.sol";
 
 /**
  * @title ProtocolManager
- * @notice Creates PositionManager contracts, track their users and distribute rewards
+ * @notice Creates PositionManager contracts, track their users and distribute rewards: TODO:
  */
 contract ProtocolManager is AccessControlUpgradeable {
     using SafeERC20 for IERC20;
@@ -112,14 +111,13 @@ contract ProtocolManager is AccessControlUpgradeable {
         // Event not needed since PositionManager emits Withdraw event
     }
 
-    function deployPositionManager(address receiverAddress, uint256 receiverPercentage, uint256 initialPoolId) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address) {
-        PositionManager pm = new PositionManager(address(baseToken), initialPoolId);
+    function registerReceiverData(address receiverAddress, uint256 receiverPercentage) external {
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
-        PositionManagerData storage pmData = _getProtocolManagerStorage()._positionManagersData[address(pm)];
+        PositionManagerData storage pmData = $._positionManagersData[msg.sender];
+
         pmData.receiverAddress = receiverAddress;
         pmData.receiverPercentage = receiverPercentage;
-
-        return address(pm);
     }
 
     function distributeRewards(address positionManager) external {
