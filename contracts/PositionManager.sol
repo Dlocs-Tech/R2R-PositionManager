@@ -85,6 +85,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /**
      * @notice Constructor
      * @param poolId ID of the initial pool to set
+     * @param protocolManager Address of the ProtocolManager contract
+     * @param receiverAddress Address that will receive a percentage of the rewards
+     * @param receiverPercentage Percentage of the rewards to be sent to the receiver address (1 ether = 100%)
      */
     constructor(
         uint256 poolId,
@@ -92,22 +95,15 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         address receiverAddress,
         uint256 receiverPercentage
     ) ERC20("PositionManager", "PM") {
-        require(
-            receiverAddress != address(0) &&
-            receiverPercentage <= MAX_PERCENTAGE &&
-            receiverPercentage != 0
-            , InvalidInput()
-        );
-
         changePoolData(poolId);
         
         _protocolManager = IProtocolManager(protocolManager);
 
+        _setReceiverData(receiverAddress, receiverPercentage);
+
         baseToken = IERC20(_protocolManager.baseToken());
 
         _locker = _protocolManager.locker();
-
-        _protocolManager.registerReceiverData(receiverAddress, receiverPercentage);
     }
 
     /// @inheritdoc IPositionManager
@@ -402,6 +398,10 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         return (_tickLower, _tickUpper);
     }
 
+    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
+        _setReceiverData(receiverAddress, receiverPercentage);
+    }
+
     /// @inheritdoc IPositionManager
     function setSlippage(uint256 slippage) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
         require(slippage <= MAX_PERCENTAGE, InvalidInput());
@@ -646,6 +646,17 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     function _uint128Safe(uint256 x) private pure returns (uint128) {
         assert(x <= MAX_UINT128);
         return uint128(x);
+    }
+
+    function _setReceiverData(address receiverAddress, uint256 receiverPercentage) private {
+        require(
+            receiverAddress != address(0) &&
+            receiverPercentage <= MAX_PERCENTAGE &&
+            receiverPercentage != 0,
+            InvalidInput()
+        );
+
+        _protocolManager.registerReceiverData(receiverAddress, receiverPercentage);
     }
 
     /// Callback functions
