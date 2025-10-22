@@ -150,12 +150,12 @@ contract ProtocolManager is AccessControlUpgradeable {
                 // Calculate percentage of the shares over the total supply
                 uint256 userPercentage = Math.mulDiv(IERC20(positionManager).balanceOf(user), MAX_PERCENTAGE, totalShares);
 
-                // Calculate the amount of USDT of that user using the percentage
-                uint256 userUsdt = Math.mulDiv(amountToDistribute, userPercentage, MAX_PERCENTAGE);
+                // Calculate the amount of baseToken of that user using the percentage
+                uint256 userBaseToken = Math.mulDiv(amountToDistribute, userPercentage, MAX_PERCENTAGE);
 
-                if (userUsdt == 0) continue; // Should never happen
+                if (userBaseToken == 0) continue; // Should never happen
 
-                pmData._claimableBalances[user] += userUsdt;
+                pmData._claimableBalances[user] += userBaseToken;
             }
         }
 
