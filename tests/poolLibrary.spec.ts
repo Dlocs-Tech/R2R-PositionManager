@@ -232,7 +232,7 @@ export default async function suite(): Promise<void> {
             const poolData = {
                 mainPool: mockMainPool,
                 token0Pool: ethers.ZeroAddress,
-                token1Pool: ethers.ZeroAddress,
+                token1Pool: mockToken1Pool,
                 chainlinkDataFeed: mockChainlinkDataFeed,
                 chainlinkTimeInterval: mockTimeInterval,
             };
@@ -242,9 +242,26 @@ export default async function suite(): Promise<void> {
             const retrievedPoolData = await poolLibrary.getPoolData(0);
             expect(retrievedPoolData.mainPool).to.equal(mockMainPool);
             expect(retrievedPoolData.token0Pool).to.equal(ethers.ZeroAddress);
-            expect(retrievedPoolData.token1Pool).to.equal(ethers.ZeroAddress);
+            expect(retrievedPoolData.token1Pool).to.equal(mockToken1Pool);
             expect(retrievedPoolData.chainlinkDataFeed).to.equal(mockChainlinkDataFeed);
             expect(retrievedPoolData.chainlinkTimeInterval).to.equal(mockTimeInterval);
+
+            const poolData2 = {
+                mainPool: mockMainPool,
+                token0Pool: mockToken0Pool,
+                token1Pool: ethers.ZeroAddress,
+                chainlinkDataFeed: mockChainlinkDataFeed,
+                chainlinkTimeInterval: mockTimeInterval,
+            };
+
+            await poolLibrary.addPool(poolData2);
+
+            const retrievedPoolData2 = await poolLibrary.getPoolData(1);
+            expect(retrievedPoolData2.mainPool).to.equal(mockMainPool);
+            expect(retrievedPoolData2.token0Pool).to.equal(mockToken0Pool);
+            expect(retrievedPoolData2.token1Pool).to.equal(ethers.ZeroAddress);
+            expect(retrievedPoolData2.chainlinkDataFeed).to.equal(mockChainlinkDataFeed);
+            expect(retrievedPoolData2.chainlinkTimeInterval).to.equal(mockTimeInterval);
         });
 
         it("Should allow updating pool multiple times", async () => {
