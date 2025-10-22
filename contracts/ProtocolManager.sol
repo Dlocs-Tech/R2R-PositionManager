@@ -79,7 +79,6 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         require(_baseToken != address(0), ZeroAddress());
 
         baseToken = IERC20(_baseToken);
-        // Deploy locker
 
         _disableInitializers();
     }
