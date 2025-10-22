@@ -32,6 +32,12 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
     event RewardCollected(address indexed user, address indexed positionManager, uint256 amount);
 
+    event ReceiverDataRegistered(address indexed positionManager, address receiverAddress, uint256 receiverPercentage);
+
+    event LockerUpdated(address newLocker);
+
+    event PoolLibraryUpdated(address newPoolLibrary);
+
     error InsufficientBalance(address depositor, address positionManager);
 
     error ZeroBalance();
@@ -118,6 +124,8 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
         pmData.receiverAddress = receiverAddress;
         pmData.receiverPercentage = receiverPercentage;
+
+        emit ReceiverDataRegistered(msg.sender, receiverAddress, receiverPercentage);
     }
 
     function distributeRewards(address positionManager) external {
@@ -206,6 +214,8 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         $._locker = ILocker(newLocker);
+
+        emit LockerUpdated(newLocker);
     }
 
     function setPoolLibrary(address newPoolLibrary) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -213,5 +223,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         $._poolLibrary = IPoolLibrary(newPoolLibrary);
+
+        emit PoolLibraryUpdated(newPoolLibrary);
     }
 }
