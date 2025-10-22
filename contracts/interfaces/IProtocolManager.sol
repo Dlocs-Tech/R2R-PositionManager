@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title IProtocolManager
@@ -10,7 +11,7 @@ interface IProtocolManager is IAccessControl {
     /// @notice Manager role - keccak256("Manager_Role");
     function MANAGER_ROLE() external view returns (bytes32);
 
-    function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
+    function getDefaultAdminRole() external view returns (bytes32);
 
     function registerDeposit(address depositor) external;
 
@@ -20,7 +21,7 @@ interface IProtocolManager is IAccessControl {
 
     function poolLibrary() external view returns (address);
 
-    function baseToken() external view returns (address);
+    function baseToken() external view returns (IERC20);
 
     function registerReceiverData(
         address receiverAddress,
