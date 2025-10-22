@@ -311,5 +311,99 @@ export default async function suite(): Promise<void> {
             const poolsCount = await poolLibrary.poolsCount();
             expect(poolsCount).to.equal(1);
         });
+
+        it("Should revert when adding pool with wrong values", async () => {
+            let poolData = {
+                mainPool: ethers.ZeroAddress,
+                token0Pool: mockToken0Pool,
+                token1Pool: mockToken1Pool,
+                chainlinkDataFeed: mockChainlinkDataFeed,
+                chainlinkTimeInterval: mockTimeInterval,
+            };
+
+            await expect(poolLibrary.addPool(poolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+
+            poolData = {
+                mainPool: mockMainPool,
+                token0Pool: mockToken0Pool,
+                token1Pool: mockToken1Pool,
+                chainlinkDataFeed: ethers.ZeroAddress,
+                chainlinkTimeInterval: mockTimeInterval,
+            };
+
+            await expect(poolLibrary.addPool(poolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+
+            poolData = {
+                mainPool: mockMainPool,
+                token0Pool: mockToken0Pool,
+                token1Pool: mockToken1Pool,
+                chainlinkDataFeed: mockChainlinkDataFeed,
+                chainlinkTimeInterval: 0,
+            };
+
+            await expect(poolLibrary.addPool(poolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+
+            poolData = {
+                mainPool: mockMainPool,
+                token0Pool: ethers.ZeroAddress,
+                token1Pool: ethers.ZeroAddress,
+                chainlinkDataFeed: mockChainlinkDataFeed,
+                chainlinkTimeInterval: mockTimeInterval,
+            };
+
+            await expect(poolLibrary.addPool(poolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+        });
+
+        it("Should revert when updating pool with wrong values", async () => {
+            const poolData = {
+                mainPool: mockMainPool,
+                token0Pool: mockToken0Pool,
+                token1Pool: mockToken1Pool,
+                chainlinkDataFeed: mockChainlinkDataFeed,
+                chainlinkTimeInterval: mockTimeInterval,
+            };
+
+            await poolLibrary.addPool(poolData);
+
+            let updatedPoolData = {
+                mainPool: ethers.ZeroAddress,
+                token0Pool: mockToken0Pool2,
+                token1Pool: mockToken1Pool2,
+                chainlinkDataFeed: mockChainlinkDataFeed2,
+                chainlinkTimeInterval: mockTimeInterval2,
+            };
+
+            await expect(poolLibrary.updatePool(0, updatedPoolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+
+            updatedPoolData = {
+                mainPool: mockMainPool2,
+                token0Pool: mockToken0Pool2,
+                token1Pool: mockToken1Pool2,
+                chainlinkDataFeed: ethers.ZeroAddress,
+                chainlinkTimeInterval: mockTimeInterval2,
+            };
+
+            await expect(poolLibrary.updatePool(0, updatedPoolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+
+            updatedPoolData = {
+                mainPool: mockMainPool2,
+                token0Pool: mockToken0Pool2,
+                token1Pool: mockToken1Pool2,
+                chainlinkDataFeed: mockChainlinkDataFeed2,
+                chainlinkTimeInterval: 0,
+            };
+
+            await expect(poolLibrary.updatePool(0, updatedPoolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+
+            updatedPoolData = {
+                mainPool: mockMainPool2,
+                token0Pool: ethers.ZeroAddress,
+                token1Pool: ethers.ZeroAddress,
+                chainlinkDataFeed: mockChainlinkDataFeed2,
+                chainlinkTimeInterval: mockTimeInterval2,
+            };
+
+            await expect(poolLibrary.updatePool(0, updatedPoolData)).to.be.revertedWithCustomError(poolLibrary, "InvalidInput");
+        });
     });
 }
