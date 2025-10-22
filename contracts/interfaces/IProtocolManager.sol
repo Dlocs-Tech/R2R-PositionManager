@@ -19,4 +19,11 @@ interface IProtocolManager is IAccessControl {
     function locker() external view returns (address);
 
     function poolLibrary() external view returns (address);
+
+    function baseToken() external view returns (address);
+
+    function registerReceiverData(
+        address receiverAddress,
+        uint256 receiverPercentage
+    ) external;
 }

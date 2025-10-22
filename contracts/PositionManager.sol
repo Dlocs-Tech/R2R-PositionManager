@@ -84,22 +84,30 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /**
      * @notice Constructor
-     * @param _baseToken Address of the base token
      * @param poolId ID of the initial pool to set
      */
     constructor(
-        address _baseToken,
-        uint256 poolId
+        uint256 poolId,
+        address protocolManager,
+        address receiverAddress,
+        uint256 receiverPercentage
     ) ERC20("PositionManager", "PM") {
-        require(_baseToken != address(0), InvalidInput());
+        require(
+            receiverAddress != address(0) &&
+            receiverPercentage <= MAX_PERCENTAGE &&
+            receiverPercentage != 0
+            , InvalidInput()
+        );
 
         changePoolData(poolId);
+        
+        _protocolManager = IProtocolManager(protocolManager);
 
-        baseToken = IERC20(_baseToken);
-
-        _protocolManager = IProtocolManager(msg.sender);
+        baseToken = IERC20(_protocolManager.baseToken());
 
         _locker = _protocolManager.locker();
+
+        _protocolManager.registerReceiverData(receiverAddress, receiverPercentage);
     }
 
     /// @inheritdoc IPositionManager
