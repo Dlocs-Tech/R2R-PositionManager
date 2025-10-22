@@ -9,12 +9,13 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 
 import {ILocker} from "./interfaces/ILocker.sol";
 import {IPoolLibrary} from "./interfaces/IPoolLibrary.sol";
+import {IProtocolManager} from "./interfaces/IProtocolManager.sol";
 
 /**
  * @title ProtocolManager
  * @notice Creates PositionManager contracts, track their users and distribute rewards: TODO:
  */
-contract ProtocolManager is AccessControlUpgradeable {
+contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -195,5 +196,9 @@ contract ProtocolManager is AccessControlUpgradeable {
     function usersSet(address positionManager) external view returns (address[] memory) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         return $._positionManagersData[positionManager]._depositors.values();
+    }
+
+    function getDefaultAdminRole() external pure returns (bytes32) {
+        return DEFAULT_ADMIN_ROLE;
     }
 }

@@ -101,7 +101,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         _setReceiverData(receiverAddress, receiverPercentage);
 
-        baseToken = IERC20(_protocolManager.baseToken());
+        baseToken = _protocolManager.baseToken();
 
         _locker = _protocolManager.locker();
     }
@@ -398,12 +398,12 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         return (_tickLower, _tickUpper);
     }
 
-    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
+    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external onlyRole(_protocolManager.getDefaultAdminRole()) {
         _setReceiverData(receiverAddress, receiverPercentage);
     }
 
     /// @inheritdoc IPositionManager
-    function setSlippage(uint256 slippage) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
+    function setSlippage(uint256 slippage) external onlyRole(_protocolManager.getDefaultAdminRole()) {
         require(slippage <= MAX_PERCENTAGE, InvalidInput());
 
         _slippage = slippage;
@@ -412,14 +412,14 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     /// @inheritdoc IPositionManager
-    function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
+    function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(_protocolManager.getDefaultAdminRole()) {
         minDepositAmount = minimumDepositAmount;
 
         emit MinDepositAmountUpdated(minimumDepositAmount);
     }
 
     /// @inheritdoc IPositionManager
-    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
+    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(_protocolManager.getDefaultAdminRole()) {
         _setFee(depositFeePercentage, feeReceiverAddress);
     }
 
@@ -523,7 +523,6 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         );
     }
 
-    /// @dev Adds liquidity to the position
     function _addLiquidity() private {
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
@@ -544,7 +543,6 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         IPancakeV3Pool(poolData.mainPool).mint(address(this), _tickLower, _tickUpper, liquidity, "");
     }
 
-    /// @notice Burns liquidity from the position
     function _burnLiquidity(int24 tickLower, int24 tickUpper, uint128 liquidity) private {
         if (liquidity > 0) {
             // Burn liquidity
