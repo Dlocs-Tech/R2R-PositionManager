@@ -200,4 +200,18 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
     function getDefaultAdminRole() external pure returns (bytes32) {
         return DEFAULT_ADMIN_ROLE;
     }
+
+    function setLocker(address newLocker) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newLocker != address(0), ZeroAddress());
+
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
+        $._locker = ILocker(newLocker);
+    }
+
+    function setPoolLibrary(address newPoolLibrary) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newPoolLibrary != address(0), ZeroAddress());
+
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
+        $._poolLibrary = IPoolLibrary(newPoolLibrary);
+    }
 }
