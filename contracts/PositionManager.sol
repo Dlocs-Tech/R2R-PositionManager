@@ -36,13 +36,13 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /// @dev Maximum value for uint128
     uint128 private constant MAX_UINT128 = type(uint128).max;
-    
+
     /// @dev Protocol manager address
     IProtocolManager private immutable _protocolManager;
 
     /// @dev Locker contract address that will receive non-distributed rewards
     address private immutable _locker;
-    
+
     /// @dev Pool related data
     IPoolLibrary.PoolData public poolData;
 
@@ -89,14 +89,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
      * @param receiverAddress Address that will receive a percentage of the rewards
      * @param receiverPercentage Percentage of the rewards to be sent to the receiver address (1 ether = 100%)
      */
-    constructor(
-        uint256 poolId,
-        address protocolManager,
-        address receiverAddress,
-        uint256 receiverPercentage
-    ) ERC20("PositionManager", "PM") {
+    constructor(uint256 poolId, address protocolManager, address receiverAddress, uint256 receiverPercentage) ERC20("PositionManager", "PM") {
         changePoolData(poolId);
-        
+
         _protocolManager = IProtocolManager(protocolManager);
 
         _setReceiverData(receiverAddress, receiverPercentage);
@@ -357,9 +352,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         require(
             poolData.chainlinkDataFeed != address(0) &&
-            poolData.chainlinkTimeInterval != 0 &&
-            poolData.mainPool != address(0) &&
-            (poolData.token0Pool != address(0) || poolData.token1Pool != address(0)),
+                poolData.chainlinkTimeInterval != 0 &&
+                poolData.mainPool != address(0) &&
+                (poolData.token0Pool != address(0) || poolData.token1Pool != address(0)),
             InvalidInput()
         ); // Shouldn't happen
 
@@ -647,12 +642,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     function _setReceiverData(address receiverAddress, uint256 receiverPercentage) private {
-        require(
-            receiverAddress != address(0) &&
-            receiverPercentage <= MAX_PERCENTAGE &&
-            receiverPercentage != 0,
-            InvalidInput()
-        );
+        require(receiverAddress != address(0) && receiverPercentage <= MAX_PERCENTAGE && receiverPercentage != 0, InvalidInput());
 
         _protocolManager.registerReceiverData(receiverAddress, receiverPercentage);
     }
@@ -670,10 +660,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
-        require(
-            msg.sender == poolData.mainPool || msg.sender == poolData.token0Pool || msg.sender == poolData.token1Pool,
-            NotPool()
-        );
+        require(msg.sender == poolData.mainPool || msg.sender == poolData.token0Pool || msg.sender == poolData.token1Pool, NotPool());
 
         if (amount0Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token0()).safeTransfer(msg.sender, uint256(amount0Delta));
         else if (amount1Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token1()).safeTransfer(msg.sender, uint256(amount1Delta));

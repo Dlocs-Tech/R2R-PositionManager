@@ -47,23 +47,18 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
     struct PositionManagerData {
         /// @dev Set of users that have deposited in the PositionManager
         EnumerableSet.AddressSet _depositors;
-
         /// @dev Mapping of the claimeable balances of the users
         mapping(address user => uint256) _claimableBalances;
-
         /// @dev Receiver address for a percentage of the rewards
         address receiverAddress;
-
         /// @dev Percentage of the rewards to be sent to the receiver address (1 ether = 100%)
         uint256 receiverPercentage;
     }
 
     struct ProtocolManagerStorage {
-        mapping (address positionManager => PositionManagerData) _positionManagersData;
-
+        mapping(address positionManager => PositionManagerData) _positionManagersData;
         /// @dev Locker contract where non-distributed rewards are sent
         ILocker _locker;
-
         /// @dev Pool library contract where pool data is stored
         IPoolLibrary _poolLibrary;
     }
@@ -172,11 +167,11 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
     function collectRewards(address positionManager) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        mapping (address => uint256) storage _userBalances = $._positionManagersData[positionManager]._claimableBalances;
+        mapping(address => uint256) storage _userBalances = $._positionManagersData[positionManager]._claimableBalances;
 
         uint256 rewards = _userBalances[msg.sender];
 
-        require (rewards != 0, InsufficientBalance(msg.sender, positionManager));
+        require(rewards != 0, InsufficientBalance(msg.sender, positionManager));
 
         _userBalances[msg.sender] = 0;
 

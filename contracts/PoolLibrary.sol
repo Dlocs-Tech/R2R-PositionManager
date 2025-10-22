@@ -28,10 +28,11 @@ contract PoolLibrary is IPoolLibrary, OwnableUpgradeable {
     function addPool(PoolData memory poolData) external onlyOwner {
         require(
             poolData.chainlinkDataFeed != address(0) &&
-            poolData.chainlinkTimeInterval != 0 &&
-            poolData.mainPool != address(0) &&
-            (poolData.token0Pool != address(0) || poolData.token1Pool != address(0))
-        , InvalidInput());
+                poolData.chainlinkTimeInterval != 0 &&
+                poolData.mainPool != address(0) &&
+                (poolData.token0Pool != address(0) || poolData.token1Pool != address(0)),
+            InvalidInput()
+        );
 
         poolsData[poolsCount] = poolData;
 
@@ -45,10 +46,11 @@ contract PoolLibrary is IPoolLibrary, OwnableUpgradeable {
         require(poolId < poolsCount, InvalidPoolId(poolId));
         require(
             poolData.chainlinkDataFeed != address(0) &&
-            poolData.chainlinkTimeInterval != 0 &&
-            poolData.mainPool != address(0) &&
-            (poolData.token0Pool != address(0) || poolData.token1Pool != address(0))
-        , InvalidInput());
+                poolData.chainlinkTimeInterval != 0 &&
+                poolData.mainPool != address(0) &&
+                (poolData.token0Pool != address(0) || poolData.token1Pool != address(0)),
+            InvalidInput()
+        );
 
         poolsData[poolId] = poolData;
 
