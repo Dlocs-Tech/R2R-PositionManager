@@ -85,7 +85,7 @@ contract ProtocolManager is AccessControlUpgradeable {
     }
 
     function initialize(address _locker, address _poolLibrary) external initializer {
-        require(_locker != address(0) || _poolLibrary != address(0), ZeroAddress());
+        require(_locker != address(0) && _poolLibrary != address(0), ZeroAddress());
 
         __AccessControl_init();
 
@@ -170,7 +170,7 @@ contract ProtocolManager is AccessControlUpgradeable {
 
         uint256 rewards = _userBalances[msg.sender];
 
-        if (rewards == 0) revert InsufficientBalance(msg.sender, positionManager);
+        require (rewards != 0, InsufficientBalance(msg.sender, positionManager));
 
         _userBalances[msg.sender] = 0;
 

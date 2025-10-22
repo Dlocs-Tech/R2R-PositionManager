@@ -30,7 +30,7 @@ contract PoolLibrary is IPoolLibrary, OwnableUpgradeable {
             poolData.chainlinkDataFeed != address(0) &&
             poolData.chainlinkTimeInterval != 0 &&
             poolData.mainPool != address(0) &&
-            !(poolData.token0Pool == address(0) && poolData.token1Pool == address(0))
+            (poolData.token0Pool != address(0) || poolData.token1Pool != address(0))
         , InvalidInput());
 
         poolsData[poolsCount] = poolData;
@@ -47,7 +47,7 @@ contract PoolLibrary is IPoolLibrary, OwnableUpgradeable {
             poolData.chainlinkDataFeed != address(0) &&
             poolData.chainlinkTimeInterval != 0 &&
             poolData.mainPool != address(0) &&
-            !(poolData.token0Pool == address(0) && poolData.token1Pool == address(0))
+            (poolData.token0Pool != address(0) || poolData.token1Pool != address(0))
         , InvalidInput());
 
         poolsData[poolId] = poolData;
