@@ -78,7 +78,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
      * @param role Role to check
      */
     modifier onlyRole(bytes32 role) {
-        if (!_protocolManager.hasRole(role, msg.sender)) revert IAccessControl.AccessControlUnauthorizedAccount(msg.sender, role);
+        require(_protocolManager.hasRole(role, msg.sender), IAccessControl.AccessControlUnauthorizedAccount(msg.sender, role));
         _;
     }
 
@@ -91,9 +91,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         address _baseToken,
         uint256 poolId
     ) ERC20("PositionManager", "PM") {
-        if (
-            _baseToken == address(0)
-        ) revert InvalidInput();
+        require(_baseToken != address(0), InvalidInput());
 
         changePoolData(poolId);
 
@@ -106,7 +104,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /// @inheritdoc IPositionManager
     function deposit(uint256 depositAmount) external nonReentrant returns (uint256 shares) {
-        if (depositAmount < minDepositAmount) revert InvalidInput();
+        require(depositAmount >= minDepositAmount, InvalidInput());
 
         _protocolManager.registerDeposit(msg.sender);
 
@@ -180,7 +178,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     function withdraw() external nonReentrant {
         uint256 shares = balanceOf(msg.sender);
 
-        if (shares == 0) revert InsufficientBalance();
+        require(shares > 0, InsufficientBalance());
 
         _protocolManager.registerWithdraw(msg.sender);
 
@@ -227,9 +225,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @inheritdoc IPositionManager
     function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only add liquidity if the contract is not in position
-        if (_tickLower != _tickUpper) revert InvalidInput();
+        require(_tickLower == _tickUpper, InvalidInput());
 
-        if (tickLower > tickUpper) revert InvalidInput();
+        require(tickLower <= tickUpper, InvalidInput());
 
         _tickLower = tickLower;
         _tickUpper = tickUpper;
@@ -239,7 +237,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         uint256 baseTokenAmount = baseToken.balanceOf(address(this));
 
-        if (baseTokenAmount == 0) revert InvalidInput();
+        require(baseTokenAmount > 0, InvalidInput());
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
@@ -261,7 +259,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @inheritdoc IPositionManager
     function removeLiquidity() external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only remove liquidity if the contract is in position
-        if (_tickLower == _tickUpper) revert InvalidInput();
+        require(_tickLower != _tickUpper, InvalidInput());
 
         // Harvest to collect fees
         _harvest();
@@ -303,8 +301,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @inheritdoc IPositionManager
     function updatePosition(int24 tickLower, int24 tickUpper) external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only update position if the contract is in position and new ticks are okay
-        if (_tickLower == _tickUpper) revert InvalidInput();
-        if (tickLower > tickUpper) revert InvalidInput();
+        require(_tickLower != _tickUpper, InvalidInput());
+        require(tickLower <= tickUpper, InvalidInput());
 
         // Harvest to collect fees
         _harvest();
@@ -329,7 +327,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// @inheritdoc IPositionManager
     function reAddLiquidity() external {
         // Only re add liquidity if the contract is in position
-        if (_tickLower == _tickUpper) revert InvalidInput();
+        require(_tickLower != _tickUpper, InvalidInput());
 
         // Harvest to collect fees
         _harvest();
@@ -347,18 +345,19 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     function changePoolData(uint256 poolId) public onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only change pool data if the contract is not in position
-        if (_tickLower != _tickUpper) revert InvalidInput();
+        require(_tickLower == _tickUpper, InvalidInput());
 
         IPoolLibrary poolLibrary = IPoolLibrary(_protocolManager.poolLibrary());
 
         poolData = poolLibrary.getPoolData(poolId);
 
-        if (
-            poolData.chainlinkDataFeed == address(0) ||
-            poolData.chainlinkTimeInterval == 0 ||
-            poolData.mainPool == address(0) ||
-            (poolData.token0Pool == address(0) && poolData.token1Pool == address(0))
-        ) revert InvalidInput(); // Shouldn't happen
+        require(
+            poolData.chainlinkDataFeed != address(0) &&
+            poolData.chainlinkTimeInterval != 0 &&
+            poolData.mainPool != address(0) &&
+            (poolData.token0Pool != address(0) || poolData.token1Pool != address(0)),
+            InvalidInput()
+        ); // Shouldn't happen
 
         // Determine pool0 direction
         if (poolData.token0Pool != address(0) && IPancakeV3Pool(poolData.token0Pool).token1() == address(baseToken)) _pool0Direction = true;
@@ -397,7 +396,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /// @inheritdoc IPositionManager
     function setSlippage(uint256 slippage) external onlyRole(_protocolManager.DEFAULT_ADMIN_ROLE()) {
-        if (slippage > MAX_PERCENTAGE) revert InvalidInput();
+        require(slippage <= MAX_PERCENTAGE, InvalidInput());
 
         _slippage = slippage;
 
@@ -589,7 +588,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     function _getChainlinkPrice() private view returns (uint256) {
         (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(poolData.chainlinkDataFeed).latestRoundData();
 
-        if (price <= 0 || block.timestamp - poolData.chainlinkTimeInterval > updatedAt) revert InvalidInput();
+        require(price > 0 && block.timestamp - poolData.chainlinkTimeInterval <= updatedAt, InvalidInput());
 
         return uint256(price);
     }
@@ -621,7 +620,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         if (zeroForOne) amountOut = IERC20(pool.token1()).balanceOf(address(this)) - balanceBefore;
         else amountOut = IERC20(pool.token0()).balanceOf(address(this)) - balanceBefore;
 
-        if (amountOut < amountOutMin) revert NotEnoughBalance();
+        require(amountOut >= amountOutMin, NotEnoughBalance());
 
         return amountOut;
     }
@@ -644,8 +643,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     /// Callback functions
 
     function pancakeswapV3MintCallback(uint256 amount0, uint256 amount1, bytes memory /*data*/) external {
-        if (msg.sender != poolData.mainPool) revert NotPool();
-        if (!_minting) revert InvalidInput();
+        require(msg.sender == poolData.mainPool, NotPool());
+        require(_minting, InvalidInput());
 
         if (amount0 > 0) _token0.safeTransfer(poolData.mainPool, amount0);
         if (amount1 > 0) _token1.safeTransfer(poolData.mainPool, amount1);
@@ -654,14 +653,17 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     }
 
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
-        if (msg.sender != poolData.mainPool && msg.sender != poolData.token0Pool && msg.sender != poolData.token1Pool) revert NotPool();
+        require(
+            msg.sender == poolData.mainPool || msg.sender == poolData.token0Pool || msg.sender == poolData.token1Pool,
+            NotPool()
+        );
 
         if (amount0Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token0()).safeTransfer(msg.sender, uint256(amount0Delta));
         else if (amount1Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token1()).safeTransfer(msg.sender, uint256(amount1Delta));
     }
 
     function pancakeV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata /*data*/) external {
-        if (msg.sender != poolData.mainPool) revert NotPool();
+        require(msg.sender == poolData.mainPool, NotPool());
 
         if (amount0Owed > 0) _token0.safeTransfer(msg.sender, uint256(amount0Owed));
         if (amount1Owed > 0) _token1.safeTransfer(msg.sender, uint256(amount1Owed));
