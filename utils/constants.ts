@@ -3,10 +3,6 @@ import { ethers } from "hardhat";
 
 dotenv.config();
 
-export const roles: any = {
-    DEFAULT_ADMIN_ROLE: ethers.ZeroHash,
-};
-
 // BSC Addresses
 export const contractAddresses: any = {
     USDT: "0x55d398326f99059fF775485246999027B3197955",
