@@ -3,11 +3,6 @@ import { ethers } from "hardhat";
 
 dotenv.config();
 
-export const roles: any = {
-    DEFAULT_ADMIN_ROLE: "0x0000000000000000000000000000000000000000000000000000000000000000",
-    POSITION_MANAGER_ROLE: "0xf33d40e6c84e251a3e1cff80c569d5646a4f006b85649b53b993dadc59eb3748"
-};
-
 // BSC Addresses
 export const contractAddresses: any = {
     USDT: "0x55d398326f99059fF775485246999027B3197955",
@@ -49,6 +44,7 @@ export const contractAddresses: any = {
 };
 
 export const percentages: any = {
+    MAX_PERCENTAGE: ethers.parseEther("1"),
     ReceiverPercentage: 350000, // 35%
     ExclusiveManagerPercentage: 50000, // 5%
     ReceiverPercentageInExclusiveManagerVersion: 315789 // 31.5789%
@@ -58,7 +54,7 @@ export const initValues_PositionManagerDistributor: any = {
     USDT_WBNB: {
         dataFeedAddress: contractAddresses["ChainLink_WBNB_USD"],
         poolAddress: contractAddresses["Pool_USDT_WBNB"],
-        pool0Address: ethers.constants.AddressZero,
+        pool0Address: ethers.ZeroAddress,
         pool1Address: contractAddresses["Pool_USDT_WBNB"],
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
@@ -67,7 +63,7 @@ export const initValues_PositionManagerDistributor: any = {
         dataFeedAddress: contractAddresses["ChainLink_USDT_USD"],
         poolAddress: contractAddresses["Pool_ETH_USDT"],
         pool0Address: contractAddresses["Pool_ETH_USDT"],
-        pool1Address: ethers.constants.AddressZero,
+        pool1Address: ethers.ZeroAddress,
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
     },
@@ -82,7 +78,7 @@ export const initValues_PositionManagerDistributor: any = {
     USDT_BTCB: {
         dataFeedAddress: contractAddresses["ChainLink_BTCB_USD"],
         poolAddress: contractAddresses["Pool_USDT_BTCB"],
-        pool0Address: ethers.constants.AddressZero,
+        pool0Address: ethers.ZeroAddress,
         pool1Address: contractAddresses["Pool_USDT_BTCB"],
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
@@ -90,7 +86,7 @@ export const initValues_PositionManagerDistributor: any = {
     USDT_BTCB_2: {
         dataFeedAddress: contractAddresses["ChainLink_BTCB_USD"],
         poolAddress: contractAddresses["Pool_USDT_BTCB_2"],
-        pool0Address: ethers.constants.AddressZero,
+        pool0Address: ethers.ZeroAddress,
         pool1Address: contractAddresses["Pool_USDT_BTCB"],
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
@@ -106,7 +102,7 @@ export const initValues_PositionManagerDistributor: any = {
     USDT_USDC: {
         dataFeedAddress: contractAddresses["ChainLink_USDC_USD"],
         poolAddress: contractAddresses["Pool_USDT_USDC"],
-        pool0Address: ethers.constants.AddressZero,
+        pool0Address: ethers.ZeroAddress,
         pool1Address: contractAddresses["Pool_USDT_USDC"],
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
@@ -123,7 +119,7 @@ export const initValues_PositionManagerDistributor: any = {
         dataFeedAddress: contractAddresses["ChainLink_USDT_USD"],
         poolAddress: contractAddresses["Pool_XRP_USDT"],
         pool0Address: contractAddresses["Pool_XRP_USDT"],
-        pool1Address: ethers.constants.AddressZero,
+        pool1Address: ethers.ZeroAddress,
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],
     },
@@ -131,7 +127,7 @@ export const initValues_PositionManagerDistributor: any = {
         dataFeedAddress: contractAddresses["ChainLink_USDT_USD"],
         poolAddress: contractAddresses["Pool_ASTER_USDT"],
         pool0Address: contractAddresses["Pool_ASTER_USDT"],
-        pool1Address: ethers.constants.AddressZero,
+        pool1Address: ethers.ZeroAddress,
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentageInExclusiveManagerVersion"],
     },
@@ -146,7 +142,7 @@ export const initValues_PositionManagerDistributor: any = {
     USDT_SOL: {
         dataFeedAddress: contractAddresses["ChainLink_SOL_USD"],
         poolAddress: contractAddresses["Pool_USDT_SOL"],
-        pool0Address: ethers.constants.AddressZero,
+        pool0Address: ethers.ZeroAddress,
         pool1Address: contractAddresses["Pool_USDT_SOL"],
         receiverAddress: contractAddresses["DefaultReceiverAddress"],
         receiverFeePercentage: percentages["ReceiverPercentage"],

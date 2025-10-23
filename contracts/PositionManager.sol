@@ -1,33 +1,31 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.30;
 
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
-import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
-import {FullMath} from "@aperture_finance/uni-v3-lib/src/FullMath.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPancakeV3SwapCallback} from "@pancakeswap/v3-core/contracts/interfaces/callback/IPancakeV3SwapCallback.sol";
 import {IPancakeV3Pool} from "@pancakeswap/v3-core/contracts/interfaces/IPancakeV3Pool.sol";
+import {LiquidityAmounts} from "@aperture_finance/uni-v3-lib/src/LiquidityAmounts.sol";
+import {TickMath} from "@aperture_finance/uni-v3-lib/src/TickMath.sol";
 
+import {IProtocolManager, IAccessControl} from "./interfaces/IProtocolManager.sol";
 import {IPositionManager} from "./interfaces/IPositionManager.sol";
-import {IPositionManagerDistributor} from "./interfaces/IPositionManagerDistributor.sol";
+import {IPoolLibrary} from "./interfaces/IPoolLibrary.sol";
 import {FeeManagement} from "./FeeManagement.sol";
 
 /**
  * @title PositionManager
  * @dev Contract that allows users to deposit and withdraw from a position strategy in PancakeSwap managed by a manager
- *      NOTE: Users deposit USDT and receive shares in return
- *            Users withdraw shares and receive USDT or Token0 and Token1 in return
+ *      NOTE: Users deposit baseToken and receive shares in return
+ *            Users withdraw shares and receive baseToken in return
  *            All the tokens are expected to have 18 decimals
  *
  *            The operator can make the contract open, close and update a position with the funds deposited by the users
- *
- *            This contract involves two receivers, the deposit `feeReceiver` from the FeeManagement contract and the rewards `receiverAddress`
  */
-contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallback, AccessControl, ReentrancyGuard, ERC20 {
+contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagement, ReentrancyGuard, ERC20 {
     using SafeERC20 for IERC20;
 
     /// @notice Precision used in the contract
@@ -39,50 +37,32 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     /// @dev Maximum value for uint128
     uint128 private constant MAX_UINT128 = type(uint128).max;
 
-    /// @dev Time interval to check the Chainlink price
-    uint256 private constant TWENTY_MINUTES = 20 minutes;
+    /// @dev Protocol manager address
+    IProtocolManager private immutable _protocolManager;
 
-    /// @notice Manager role
-    bytes32 public constant MANAGER_ROLE = keccak256("Position_Manager_Role");
+    /// @dev Locker contract address that will receive non-distributed rewards
+    address private immutable _locker;
 
-    /// @dev Address of the data feed used to get the token1 price in USD
-    AggregatorV3Interface private immutable _dataFeed;
+    /// @dev Pool related data
+    IPoolLibrary.PoolData public poolData;
 
-    /// @dev Address of the main PancakeSwap V3 pool (where the position is)
-    IPancakeV3Pool private immutable _pool;
+    /// @dev Boolean to indicate if the pool is token0/baseToken (true) or baseToken/token0 (false)
+    bool private _pool0Direction;
 
-    /// @dev Address of the pool to swap USDT to token0 and vice versa (zero if not necessary)
-    IPancakeV3Pool private immutable _pool0;
-
-    /// @dev Boolean to indicate if the pool is token0/USDT (true) or USDT/token0 (false)
-    bool private immutable _pool0Direction;
-
-    /// @dev Address of the pool to swap USDT to token1 and vice versa (zero if not necessary)
-    IPancakeV3Pool private immutable _pool1;
-
-    /// @dev Boolean to indicate if the pool is token1/USDT (true) or USDT/token1 (false)
-    bool private immutable _pool1Direction;
-
-    /// @dev Factory address
-    address private immutable _factory;
+    /// @dev Boolean to indicate if the pool is token1/baseToken (true) or baseToken/token1 (false)
+    bool private _pool1Direction;
 
     /// @dev Token0 of the pool
-    IERC20 private immutable _token0;
+    IERC20 private _token0;
 
     /// @dev Token1 of the pool
-    IERC20 private immutable _token1;
+    IERC20 private _token1;
 
-    /// @notice Address of the receiver of the fees
-    address public receiverAddress;
+    /// @dev Max slippage percentage allowed in swaps (1 ether = 100%)
+    uint256 private _slippage = 1e17; // 10%
 
-    /// @notice Percentage of the funds destined to the receiver
-    uint256 public receiverPercentage;
-
-    /// @dev Max slippage percentage allowed in swaps with 4 decimals
-    uint256 private _slippage = 10_000; // 1%
-
-    /// @notice Minimum USDT deposit amount
-    uint256 public minDepositAmount = 10e18; // 10 USDT
+    /// @notice Minimum baseToken deposit amount
+    uint256 public minDepositAmount = 10 ether; // 10 baseToken
 
     /// @dev Lower tick of the position
     int24 private _tickLower;
@@ -93,77 +73,48 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     /// @dev Bool switch to prevent reentrancy on the mint callback
     bool private _minting;
 
-    /// @dev Modifier to check if the caller is the factory
-    modifier onlyFactory() {
-        if (msg.sender != _factory) revert InvalidEntry();
+    /**
+     * @notice Modifier that checks if the caller has the specified role
+     * @param role Role to check
+     */
+    modifier onlyRole(bytes32 role) {
+        require(_protocolManager.hasRole(role, msg.sender), IAccessControl.AccessControlUnauthorizedAccount(msg.sender, role));
         _;
     }
 
     /**
      * @notice Constructor
-     * @param dataFeedAddress Address of the data feed used to get the token1 price in USD
-     * @param poolAddress Address of the main PancakeSwap V3 pool
-     * @param pool0Address Address of the pool to swap USDT to token0 (zero if token0 is already USDT)
-     * @param pool1Address Address of the pool to swap USDT to token1 (zero if token1 is already USDT)
-     * @param usdtAddress Address of the USDT token
-     * @param receiverAddress_ Address of the receiver of the fees
-     * @param receiverFeePercentage_ Percentage of the funds destined to the receiver
+     * @param poolId ID of the initial pool to set
+     * @param protocolManager Address of the ProtocolManager contract
+     * @param receiverAddress Address that will receive a percentage of the rewards
+     * @param receiverPercentage Percentage of the rewards to be sent to the receiver address (1 ether = 100%)
      */
-    constructor(
-        address dataFeedAddress,
-        address poolAddress,
-        address pool0Address,
-        address pool1Address,
-        address usdtAddress,
-        address receiverAddress_,
-        uint256 receiverFeePercentage_
-    ) ERC20("PositionManager", "PM") {
-        if (
-            dataFeedAddress == address(0) ||
-            poolAddress == address(0) ||
-            usdtAddress == address(0) ||
-            receiverAddress_ == address(0) ||
-            receiverFeePercentage_ > MAX_PERCENTAGE ||
-            receiverFeePercentage_ == 0 ||
-            (pool0Address == address(0) && pool1Address == address(0))
-        ) revert InvalidInput();
+    constructor(uint256 poolId, address protocolManager, address receiverAddress, uint256 receiverPercentage) ERC20("PositionManager", "PM") {
+        changePoolData(poolId);
 
-        _dataFeed = AggregatorV3Interface(dataFeedAddress);
+        _protocolManager = IProtocolManager(protocolManager);
 
-        _pool = IPancakeV3Pool(poolAddress);
+        _setReceiverData(receiverAddress, receiverPercentage);
 
-        _pool0 = IPancakeV3Pool(pool0Address);
-        _pool1 = IPancakeV3Pool(pool1Address);
+        baseToken = _protocolManager.baseToken();
 
-        _token0 = IERC20(_pool.token0());
-        _token1 = IERC20(_pool.token1());
-
-        usdt = IERC20(usdtAddress);
-
-        receiverAddress = receiverAddress_;
-
-        receiverPercentage = receiverFeePercentage_;
-
-        _factory = msg.sender;
-
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        if (address(_pool0) != address(0) && _pool0.token1() == usdtAddress) _pool0Direction = true;
-        if (address(_pool1) != address(0) && _pool1.token1() == usdtAddress) _pool1Direction = true;
+        _locker = _protocolManager.locker();
     }
 
     /// @inheritdoc IPositionManager
-    function deposit(uint256 depositAmount, address sender) external onlyFactory returns (uint256 shares) {
-        if (depositAmount < minDepositAmount) revert InvalidInput();
+    function deposit(uint256 depositAmount) external nonReentrant returns (uint256 shares) {
+        require(depositAmount >= minDepositAmount, InvalidInput());
 
-        // Transfer USDT from user to contract
-        usdt.safeTransferFrom(sender, address(this), depositAmount);
+        _protocolManager.registerDeposit(msg.sender);
+
+        // Transfer baseToken from user to contract
+        baseToken.safeTransferFrom(msg.sender, address(this), depositAmount);
 
         depositAmount = _chargeDepositFee(depositAmount);
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        // Invest the USDT in the current position
+        // Invest the baseToken in the current position
         if (_tickLower != _tickUpper) {
             // Harvest to collect fees
             _harvest();
@@ -175,16 +126,16 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
 
             uint256 poolPrice = _getPoolTokensPrice();
 
-            // If token0 or token1 is USDT, we need to adjust the amountToken0 or amountToken1
-            if (address(_pool0) == address(0)) amountToken0 -= depositAmount;
-            else if (address(_pool1) == address(0)) amountToken1 -= depositAmount;
+            // If token0 or token1 is baseToken, we need to adjust the amountToken0 or amountToken1
+            if (poolData.token0Pool == address(0)) amountToken0 -= depositAmount;
+            else if (poolData.token1Pool == address(0)) amountToken1 -= depositAmount;
 
-            uint256 contractLiqInToken1 = FullMath.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
+            uint256 contractLiqInToken1 = Math.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
-            uint256 userLiqInToken1 = FullMath.mulDiv(depositAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
+            uint256 userLiqInToken1 = Math.mulDiv(depositAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
 
             // Calculate shares to mint (totalSupply cannot be 0 if the contract is in position)
-            shares = FullMath.mulDiv(userLiqInToken1, totalSupply(), contractLiqInToken1);
+            shares = Math.mulDiv(userLiqInToken1, totalSupply(), contractLiqInToken1);
 
             // Swap token0 or token1 to balance the contract
             _balanceContractTokens(amountToken0, amountToken1, poolPrice);
@@ -193,40 +144,42 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
 
             (amountToken0, amountToken1) = _getTotalAmounts();
 
-            contractLiqInToken1 = FullMath.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
+            contractLiqInToken1 = Math.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
-            uint256 contractLiqInToken0 = FullMath.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
+            uint256 contractLiqInToken0 = Math.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
 
             uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1, poolPrice);
 
-            // Swap USDT to token0 and token1 maintaining the balance percentage
-            _balanceSpecifiedUsdtAmount(depositAmount, token1Price, poolPrice, token0Percentage);
+            // Swap baseToken to token0 and token1 maintaining the balance percentage
+            _balanceSpecifiedBaseTokenAmount(depositAmount, token1Price, poolPrice, token0Percentage);
 
             _addLiquidity();
         } else {
             // Case when the contract is not in position
             // Calculate the amount of shares to mint
-            shares = FullMath.mulDiv(depositAmount, token1Price, PRECISION);
+            shares = Math.mulDiv(depositAmount, token1Price, PRECISION);
 
             if (totalSupply() > 0) {
-                uint256 contractAmount = usdt.balanceOf(address(this)) - depositAmount;
+                uint256 contractAmount = baseToken.balanceOf(address(this)) - depositAmount;
 
-                uint256 token1ContractAmount = FullMath.mulDiv(contractAmount, token1Price, PRECISION);
+                uint256 token1ContractAmount = Math.mulDiv(contractAmount, token1Price, PRECISION);
 
-                shares = FullMath.mulDiv(shares, totalSupply(), token1ContractAmount);
+                shares = Math.mulDiv(shares, totalSupply(), token1ContractAmount);
             }
         }
 
-        _mint(sender, shares);
+        _mint(msg.sender, shares);
 
-        emit Deposit(sender, shares, depositAmount);
+        emit Deposit(msg.sender, shares, depositAmount);
     }
 
     /// @inheritdoc IPositionManager
-    function withdraw(address sender) external onlyFactory nonReentrant {
-        uint256 shares = balanceOf(sender);
+    function withdraw() external nonReentrant {
+        uint256 shares = balanceOf(msg.sender);
 
-        if (shares == 0) revert InsufficientBalance();
+        require(shares > 0, InsufficientBalance());
+
+        _protocolManager.registerWithdrawal(msg.sender);
 
         // Contract is in position
         if (_tickLower != _tickUpper) {
@@ -238,11 +191,11 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
 
             (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-            uint256 userAmount0 = FullMath.mulDiv(amountToken0, shares, totalSupply());
-            uint256 userAmount1 = FullMath.mulDiv(amountToken1, shares, totalSupply());
+            uint256 userAmount0 = Math.mulDiv(amountToken0, shares, totalSupply());
+            uint256 userAmount1 = Math.mulDiv(amountToken1, shares, totalSupply());
 
-            if (userAmount0 > 0) _token0.safeTransfer(sender, userAmount0);
-            if (userAmount1 > 0) _token1.safeTransfer(sender, userAmount1);
+            if (userAmount0 > 0) _token0.safeTransfer(msg.sender, userAmount0);
+            if (userAmount1 > 0) _token1.safeTransfer(msg.sender, userAmount1);
 
             if (totalSupply() == shares)
                 _tickLower = _tickUpper = 0; // Set the contract to not in position
@@ -254,26 +207,26 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
             }
         } else {
             // Contract is not in position
-            // Calculate the contract balance in token1
-            uint256 contractAmount = usdt.balanceOf(address(this));
+            // Calculate the contract balance in baseToken
+            uint256 contractAmount = baseToken.balanceOf(address(this));
 
-            // Calculate the amount of USDT to send to the user
-            uint256 userUsdtAmount = FullMath.mulDiv(contractAmount, shares, totalSupply());
+            // Calculate the amount of baseToken to send to the user
+            uint256 userBaseTokenAmount = Math.mulDiv(contractAmount, shares, totalSupply());
 
-            usdt.safeTransfer(sender, userUsdtAmount);
+            baseToken.safeTransfer(msg.sender, userBaseTokenAmount);
         }
 
-        _burn(sender, shares);
+        _burn(msg.sender, shares);
 
-        emit Withdraw(sender, shares);
+        emit Withdraw(msg.sender, shares);
     }
 
     /// @inheritdoc IPositionManager
-    function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
+    function addLiquidity(int24 tickLower, int24 tickUpper) external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only add liquidity if the contract is not in position
-        if (_tickLower != _tickUpper) revert InvalidEntry();
+        require(_tickLower == _tickUpper, InvalidInput());
 
-        if (tickLower > tickUpper) revert InvalidInput();
+        require(tickLower <= tickUpper, InvalidInput());
 
         _tickLower = tickLower;
         _tickUpper = tickUpper;
@@ -281,21 +234,21 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         // Harvest to collect fees
         _harvest();
 
-        uint256 usdtAmount = usdt.balanceOf(address(this));
+        uint256 baseTokenAmount = baseToken.balanceOf(address(this));
 
-        if (usdtAmount == 0) revert InvalidEntry();
+        require(baseTokenAmount > 0, InvalidInput());
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
         uint256 poolPrice = _getPoolTokensPrice();
 
-        uint256 contractLiqInToken1 = FullMath.mulDiv(usdtAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
-        uint256 contractLiqInToken0 = FullMath.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
+        uint256 contractLiqInToken1 = Math.mulDiv(baseTokenAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
+        uint256 contractLiqInToken0 = Math.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
 
         // Calculate the percentage of token0 in the pool to know how much to swap
         uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1, poolPrice);
 
-        _balanceSpecifiedUsdtAmount(usdtAmount, token1Price, poolPrice, token0Percentage);
+        _balanceSpecifiedBaseTokenAmount(baseTokenAmount, token1Price, poolPrice, token0Percentage);
 
         _addLiquidity();
 
@@ -303,9 +256,9 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     }
 
     /// @inheritdoc IPositionManager
-    function removeLiquidity() external onlyRole(MANAGER_ROLE) {
+    function removeLiquidity() external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only remove liquidity if the contract is in position
-        if (_tickLower == _tickUpper) revert InvalidInput();
+        require(_tickLower != _tickUpper, InvalidInput());
 
         // Harvest to collect fees
         _harvest();
@@ -313,28 +266,28 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         // Burn liquidity from the position
         _burnLiquidity(_tickLower, _tickUpper, _liquidityForShares(_tickLower, _tickUpper, totalSupply()));
 
-        // Swap token0 and token1 to USDT
+        // Swap token0 and token1 to baseToken
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
         _swapUsingPool(
-            _pool1,
+            IPancakeV3Pool(poolData.token1Pool),
             amountToken1,
             _getAmountMin(amountToken1, token1Price, true),
-            _pool1Direction, // token1 to USDT
+            _pool1Direction, // token1 to baseToken
             !_pool1Direction
         );
 
         uint256 poolPrice = _getPoolTokensPrice();
 
-        uint256 amountOutMin = FullMath.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
+        uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
         _swapUsingPool(
-            _pool0,
+            IPancakeV3Pool(poolData.token0Pool),
             amountToken0,
             _getAmountMin(amountOutMin, token1Price, true),
-            _pool0Direction, // token0 to USDT
+            _pool0Direction, // token0 to baseToken
             !_pool0Direction
         );
 
@@ -345,10 +298,10 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     }
 
     /// @inheritdoc IPositionManager
-    function updatePosition(int24 tickLower, int24 tickUpper) external onlyRole(MANAGER_ROLE) {
+    function updatePosition(int24 tickLower, int24 tickUpper) external onlyRole(_protocolManager.MANAGER_ROLE()) {
         // Only update position if the contract is in position and new ticks are okay
-        if (_tickLower == _tickUpper) revert InvalidEntry();
-        if (tickLower > tickUpper) revert InvalidInput();
+        require(_tickLower != _tickUpper, InvalidInput());
+        require(tickLower <= tickUpper, InvalidInput());
 
         // Harvest to collect fees
         _harvest();
@@ -373,7 +326,7 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     /// @inheritdoc IPositionManager
     function reAddLiquidity() external {
         // Only re add liquidity if the contract is in position
-        if (_tickLower == _tickUpper) revert InvalidEntry();
+        require(_tickLower != _tickUpper, InvalidInput());
 
         // Harvest to collect fees
         _harvest();
@@ -389,9 +342,32 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         emit LiquidityAdded(_tickLower, _tickUpper);
     }
 
-    /// @inheritdoc IPositionManager
-    function distributeRewards(uint256 amountOutMin) external onlyRole(MANAGER_ROLE) {
-        IPositionManagerDistributor(_factory).distributeRewards(receiverAddress, receiverPercentage, amountOutMin);
+    function changePoolData(uint256 poolId) public onlyRole(_protocolManager.MANAGER_ROLE()) {
+        // Only change pool data if the contract is not in position
+        require(_tickLower == _tickUpper, InvalidInput());
+
+        IPoolLibrary poolLibrary = IPoolLibrary(_protocolManager.poolLibrary());
+
+        poolData = poolLibrary.getPoolData(poolId);
+
+        require(
+            poolData.chainlinkDataFeed != address(0) &&
+                poolData.chainlinkTimeInterval != 0 &&
+                poolData.mainPool != address(0) &&
+                (poolData.token0Pool != address(0) || poolData.token1Pool != address(0)),
+            InvalidInput()
+        ); // Shouldn't happen
+
+        // Determine pool0 direction
+        if (poolData.token0Pool != address(0) && IPancakeV3Pool(poolData.token0Pool).token1() == address(baseToken)) _pool0Direction = true;
+
+        // Determine pool1 direction
+        if (poolData.token1Pool != address(0) && IPancakeV3Pool(poolData.token1Pool).token1() == address(baseToken)) _pool1Direction = true;
+
+        _token0 = IERC20(IPancakeV3Pool(poolData.mainPool).token0());
+        _token1 = IERC20(IPancakeV3Pool(poolData.mainPool).token1());
+
+        emit PoolDataChanged(poolId);
     }
 
     /// @inheritdoc IPositionManager
@@ -407,9 +383,9 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
 
         (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(sqrtRatioX96, sqrtRatioAX96, sqrtRatioBX96, liquidity0 + liquidity1);
 
-        uint256 contractLiqInToken0 = FullMath.mulDiv(amount1, PRECISION, poolPrice);
+        uint256 contractLiqInToken0 = Math.mulDiv(amount1, PRECISION, poolPrice);
 
-        return FullMath.mulDiv(amount0, uint128(PRECISION), amount0 + contractLiqInToken0);
+        return Math.mulDiv(amount0, uint128(PRECISION), amount0 + contractLiqInToken0);
     }
 
     /// @inheritdoc IPositionManager
@@ -417,19 +393,13 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         return (_tickLower, _tickUpper);
     }
 
-    /// @inheritdoc IPositionManager
-    function setReceiverData(address receiverAddress_, uint256 receiverFeePercentage_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (receiverFeePercentage_ > MAX_PERCENTAGE || receiverFeePercentage_ == 0 || receiverAddress_ == address(0)) revert InvalidInput();
-
-        receiverAddress = receiverAddress_;
-        receiverPercentage = receiverFeePercentage_;
-
-        emit ReceiverDataUpdated(receiverAddress_, receiverFeePercentage_);
+    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external onlyRole(_protocolManager.getDefaultAdminRole()) {
+        _setReceiverData(receiverAddress, receiverPercentage);
     }
 
     /// @inheritdoc IPositionManager
-    function setSlippage(uint256 slippage) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (slippage > MAX_PERCENTAGE) revert InvalidInput();
+    function setSlippage(uint256 slippage) external onlyRole(_protocolManager.getDefaultAdminRole()) {
+        require(slippage <= MAX_PERCENTAGE, InvalidInput());
 
         _slippage = slippage;
 
@@ -437,18 +407,18 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     }
 
     /// @inheritdoc IPositionManager
-    function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMinDepositAmount(uint256 minimumDepositAmount) external onlyRole(_protocolManager.getDefaultAdminRole()) {
         minDepositAmount = minimumDepositAmount;
 
         emit MinDepositAmountUpdated(minimumDepositAmount);
     }
 
     /// @inheritdoc IPositionManager
-    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFee(uint256 depositFeePercentage, address feeReceiverAddress) external onlyRole(_protocolManager.getDefaultAdminRole()) {
         _setFee(depositFeePercentage, feeReceiverAddress);
     }
 
-    /// @dev Collects the fees from the position, swaps them to USDT and sends them to the factory
+    /// @dev Collects the fees from the position, swaps them to baseToken and sends them to the factory
     function _harvest() private {
         (uint256 amountToken0Before, uint256 amountToken1Before) = _getTotalAmounts();
 
@@ -463,45 +433,45 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
         amountToken1 = _swapUsingPool(
-            _pool1,
+            IPancakeV3Pool(poolData.token1Pool),
             amountToken1,
             _getAmountMin(amountToken1, token1Price, true),
-            _pool1Direction, // token1 to USDT
+            _pool1Direction, // token1 to baseToken
             !_pool1Direction
         );
 
         uint256 poolPrice = _getPoolTokensPrice();
 
-        uint256 amountOutMin = FullMath.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
+        uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
         amountToken0 = _swapUsingPool(
-            _pool0,
+            IPancakeV3Pool(poolData.token0Pool),
             amountToken0,
             _getAmountMin(amountOutMin, token1Price, true),
-            _pool0Direction, // token0 to USDT
+            _pool0Direction, // token0 to baseToken
             !_pool0Direction
         );
 
-        if (amountToken0 + amountToken1 > 0) usdt.safeTransfer(_factory, amountToken0 + amountToken1);
+        if (amountToken0 + amountToken1 > 0) baseToken.safeTransfer(_locker, amountToken0 + amountToken1);
     }
 
     /// @dev Balances the contract tokens to maintain the proportion of token0 and token1 in the pool
     function _balanceContractTokens(uint256 amountToken0, uint256 amountToken1, uint256 poolPrice) private {
-        uint256 contractLiqInToken0 = FullMath.mulDiv(amountToken1, PRECISION, poolPrice) + amountToken0;
-        uint256 contractLiqInToken1 = FullMath.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
+        uint256 contractLiqInToken0 = Math.mulDiv(amountToken1, PRECISION, poolPrice) + amountToken0;
+        uint256 contractLiqInToken1 = Math.mulDiv(amountToken0, poolPrice, PRECISION) + amountToken1;
 
         // Calculate the percentage of token0 in the pool to know how much to swap
         uint256 token0Percentage = getRangePercentage(contractLiqInToken0, contractLiqInToken1, poolPrice);
 
         // Calculate the percentage of token0 in the contract
-        uint256 currentToken0Percentage = PRECISION - FullMath.mulDiv(amountToken1, PRECISION, contractLiqInToken1);
+        uint256 currentToken0Percentage = PRECISION - Math.mulDiv(amountToken1, PRECISION, contractLiqInToken1);
 
         // If the current percentage is higher than the target percentage, we need to swap token0 to token1
         if (currentToken0Percentage > token0Percentage) {
-            uint256 amount0ToSwap = amountToken0 - FullMath.mulDiv(contractLiqInToken0, token0Percentage, PRECISION);
+            uint256 amount0ToSwap = amountToken0 - Math.mulDiv(contractLiqInToken0, token0Percentage, PRECISION);
 
             _swapUsingPool(
-                _pool,
+                IPancakeV3Pool(poolData.mainPool),
                 amount0ToSwap,
                 _getAmountMin(amount0ToSwap, poolPrice * CHAINLINK_PRECISION, true), // poolPrice is adjusted to have same precision as chainlink price
                 true, // token0 to token1
@@ -509,10 +479,10 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
             );
         } else {
             uint256 token1Percentage = PRECISION - token0Percentage;
-            uint256 amount1ToSwap = amountToken1 - FullMath.mulDiv(contractLiqInToken1, token1Percentage, PRECISION);
+            uint256 amount1ToSwap = amountToken1 - Math.mulDiv(contractLiqInToken1, token1Percentage, PRECISION);
 
             _swapUsingPool(
-                _pool,
+                IPancakeV3Pool(poolData.mainPool),
                 amount1ToSwap,
                 _getAmountMin(amount1ToSwap, poolPrice * CHAINLINK_PRECISION, false), // poolPrice is adjusted to have same precision as chainlink price
                 false, // token1 to token0
@@ -521,34 +491,33 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         }
     }
 
-    /// @dev Balances the USDT amount to maintain the proportion of token0 and token1 in the pool
-    function _balanceSpecifiedUsdtAmount(uint256 usdtAmount, uint256 token1Price, uint256 poolPrice, uint256 token0Percentage) private {
-        uint256 amountToSwapToToken0 = FullMath.mulDiv(usdtAmount, token0Percentage, PRECISION);
+    /// @dev Balances the baseToken amount to maintain the proportion of token0 and token1 in the pool
+    function _balanceSpecifiedBaseTokenAmount(uint256 baseTokenAmount, uint256 token1Price, uint256 poolPrice, uint256 token0Percentage) private {
+        uint256 amountToSwapToToken0 = Math.mulDiv(baseTokenAmount, token0Percentage, PRECISION);
 
-        uint256 token0Price = FullMath.mulDiv(token1Price, poolPrice, PRECISION);
+        uint256 token0Price = Math.mulDiv(token1Price, poolPrice, PRECISION);
 
-        // Swap USDT to token0
+        // Swap baseToken to token0
         _swapUsingPool(
-            _pool0,
+            IPancakeV3Pool(poolData.token0Pool),
             amountToSwapToToken0,
             _getAmountMin(amountToSwapToToken0, token0Price, false),
-            !_pool0Direction, // USDT to token0
+            !_pool0Direction, // baseToken to token0
             _pool0Direction
         );
 
-        uint256 amountToSwapToToken1 = usdtAmount - amountToSwapToToken0;
+        uint256 amountToSwapToToken1 = baseTokenAmount - amountToSwapToToken0;
 
-        // Swap USDT to token1
+        // Swap baseToken to token1
         _swapUsingPool(
-            _pool1,
+            IPancakeV3Pool(poolData.token1Pool),
             amountToSwapToToken1,
             _getAmountMin(amountToSwapToToken1, token1Price, false),
-            !_pool1Direction, // USDT to token1
+            !_pool1Direction, // baseToken to token1
             _pool1Direction
         );
     }
 
-    /// @dev Adds liquidity to the position
     function _addLiquidity() private {
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
@@ -566,14 +535,13 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         // Flip minting to true and call the pool to mint the liquidity
         _minting = true;
 
-        _pool.mint(address(this), _tickLower, _tickUpper, liquidity, "");
+        IPancakeV3Pool(poolData.mainPool).mint(address(this), _tickLower, _tickUpper, liquidity, "");
     }
 
-    /// @notice Burns liquidity from the position
     function _burnLiquidity(int24 tickLower, int24 tickUpper, uint128 liquidity) private {
         if (liquidity > 0) {
             // Burn liquidity
-            _pool.burn(tickLower, tickUpper, liquidity);
+            IPancakeV3Pool(poolData.mainPool).burn(tickLower, tickUpper, liquidity);
 
             // Collect amount owed
             _collect();
@@ -584,10 +552,10 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         uint128 liquidity = _liquidity(_tickLower, _tickUpper);
 
         // trigger an update of the position fees owed and fee growth snapshots if it has any liquidity
-        if (liquidity > 0) _pool.burn(_tickLower, _tickUpper, 0);
+        if (liquidity > 0) IPancakeV3Pool(poolData.mainPool).burn(_tickLower, _tickUpper, 0);
 
         // the actual amounts collected are returned
-        _pool.collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
+        IPancakeV3Pool(poolData.mainPool).collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
     }
 
     function _getPoolTokensPrice() private view returns (uint256) {
@@ -596,11 +564,11 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
 
         // Price of token0 over token1
-        return FullMath.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
+        return Math.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
     }
 
     function _priceAndTick() private view returns (uint160 sqrtPriceX96, int24 tick) {
-        (sqrtPriceX96, tick, , , , , ) = _pool.slot0();
+        (sqrtPriceX96, tick, , , , , ) = IPancakeV3Pool(poolData.mainPool).slot0();
     }
 
     function _getTotalAmounts() private view returns (uint256 total0, uint256 total1) {
@@ -611,17 +579,17 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
     function _getAmountMin(uint256 amount, uint256 price, bool fromToken) private view returns (uint256) {
         uint256 amountOutMin;
 
-        if (fromToken) amountOutMin = FullMath.mulDiv(amount, price, PRECISION) / CHAINLINK_PRECISION;
-        else amountOutMin = FullMath.mulDiv(amount, (PRECISION) * CHAINLINK_PRECISION, price);
+        if (fromToken) amountOutMin = Math.mulDiv(amount, price, PRECISION) / CHAINLINK_PRECISION;
+        else amountOutMin = Math.mulDiv(amount, (PRECISION) * CHAINLINK_PRECISION, price);
 
         // amountOutMin with slippage applied
-        return FullMath.mulDiv(amountOutMin, MAX_PERCENTAGE - _slippage, MAX_PERCENTAGE);
+        return Math.mulDiv(amountOutMin, MAX_PERCENTAGE - _slippage, MAX_PERCENTAGE);
     }
 
     function _getChainlinkPrice() private view returns (uint256) {
-        (, int256 price, , uint256 updatedAt, ) = _dataFeed.latestRoundData();
+        (, int256 price, , uint256 updatedAt, ) = AggregatorV3Interface(poolData.chainlinkDataFeed).latestRoundData();
 
-        if (price <= 0 || block.timestamp - TWENTY_MINUTES > updatedAt) revert InvalidInput();
+        require(price > 0 && block.timestamp - poolData.chainlinkTimeInterval <= updatedAt, InvalidInput());
 
         return uint256(price);
     }
@@ -653,19 +621,19 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         if (zeroForOne) amountOut = IERC20(pool.token1()).balanceOf(address(this)) - balanceBefore;
         else amountOut = IERC20(pool.token0()).balanceOf(address(this)) - balanceBefore;
 
-        if (amountOut < amountOutMin) revert NotEnoughBalance();
+        require(amountOut >= amountOutMin, NotEnoughBalance());
 
         return amountOut;
     }
 
     function _liquidityForShares(int24 tickLower, int24 tickUpper, uint256 shares) private view returns (uint128) {
         uint128 liquidity = _liquidity(tickLower, tickUpper);
-        return _uint128Safe(FullMath.mulDiv(uint256(liquidity), shares, totalSupply()));
+        return _uint128Safe(Math.mulDiv(uint256(liquidity), shares, totalSupply()));
     }
 
     function _liquidity(int24 tickLower, int24 tickUpper) private view returns (uint128 liquidity) {
         bytes32 positionKey = keccak256(abi.encodePacked(address(this), tickLower, tickUpper));
-        (liquidity, , , , ) = _pool.positions(positionKey);
+        (liquidity, , , , ) = IPancakeV3Pool(poolData.mainPool).positions(positionKey);
     }
 
     function _uint128Safe(uint256 x) private pure returns (uint128) {
@@ -673,27 +641,33 @@ contract PositionManager is IPositionManager, FeeManagement, IPancakeV3SwapCallb
         return uint128(x);
     }
 
+    function _setReceiverData(address receiverAddress, uint256 receiverPercentage) private {
+        require(receiverAddress != address(0) && receiverPercentage <= MAX_PERCENTAGE && receiverPercentage != 0, InvalidInput());
+
+        _protocolManager.setReceiverData(receiverAddress, receiverPercentage);
+    }
+
     /// Callback functions
 
     function pancakeswapV3MintCallback(uint256 amount0, uint256 amount1, bytes memory /*data*/) external {
-        if (msg.sender != address(_pool)) revert NotPool();
-        if (!_minting) revert InvalidEntry();
+        require(msg.sender == poolData.mainPool, NotPool());
+        require(_minting, InvalidInput());
 
-        if (amount0 > 0) _token0.safeTransfer(address(_pool), amount0);
-        if (amount1 > 0) _token1.safeTransfer(address(_pool), amount1);
+        if (amount0 > 0) _token0.safeTransfer(poolData.mainPool, amount0);
+        if (amount1 > 0) _token1.safeTransfer(poolData.mainPool, amount1);
 
         _minting = false;
     }
 
     function pancakeV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata /*data*/) external {
-        if (msg.sender != address(_pool) && msg.sender != address(_pool0) && msg.sender != address(_pool1)) revert NotPool();
+        require(msg.sender == poolData.mainPool || msg.sender == poolData.token0Pool || msg.sender == poolData.token1Pool, NotPool());
 
         if (amount0Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token0()).safeTransfer(msg.sender, uint256(amount0Delta));
         else if (amount1Delta > 0) IERC20(IPancakeV3Pool(msg.sender).token1()).safeTransfer(msg.sender, uint256(amount1Delta));
     }
 
     function pancakeV3MintCallback(uint256 amount0Owed, uint256 amount1Owed, bytes calldata /*data*/) external {
-        if (msg.sender != address(_pool)) revert NotPool();
+        require(msg.sender == poolData.mainPool, NotPool());
 
         if (amount0Owed > 0) _token0.safeTransfer(msg.sender, uint256(amount0Owed));
         if (amount1Owed > 0) _token1.safeTransfer(msg.sender, uint256(amount1Owed));

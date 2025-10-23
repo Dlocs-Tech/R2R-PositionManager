@@ -5,9 +5,6 @@ pragma solidity ^0.8.22;
  * @title IPositionManager
  */
 interface IPositionManager {
-    /// @dev Error thrown when an invalid input is provided
-    error InvalidInput();
-
     /// @dev Error thrown when user has insufficient shares to withdraw
     error InsufficientBalance();
 
@@ -54,6 +51,12 @@ interface IPositionManager {
     event PositionUpdated(int24 tickLower, int24 tickUpper);
 
     /**
+     * @notice Event emitted when the pool data is changed
+     * @param poolId ID of the pool
+     */
+    event PoolDataChanged(uint256 poolId);
+
+    /**
      * @notice Event emitted when the receiver address and fee percentage are updated
      * @param receiverAddress Address of the receiver of the fees
      * @param receiverFeePercentage Percentage of the funds destined to the receiver
@@ -78,7 +81,7 @@ interface IPositionManager {
      * @return shares Amount of shares sent to the user
      * @dev The user must approve the contract to spend the USDT before calling this function
      */
-    function deposit(uint256 depositAmount, address sender) external returns (uint256 shares);
+    function deposit(uint256 depositAmount) external returns (uint256 shares);
 
     /**
      * @notice Function to withdraw shares and receive funds in return
@@ -86,7 +89,7 @@ interface IPositionManager {
      *      NOTE: If the contract is in position, the user will receive token0 and token1
      *            If the contract is not in position, the user will receive USDT
      */
-    function withdraw(address sender) external;
+    function withdraw() external;
 
     /**
      * @notice Function to add liquidity to the position
@@ -117,13 +120,6 @@ interface IPositionManager {
     function reAddLiquidity() external;
 
     /**
-     * @notice Function to distribute rewards calling the factory contract
-     * @param amountOutMin Minimum amount out for the swap
-     * @dev Only the manager can call this function
-     */
-    function distributeRewards(uint256 amountOutMin) external;
-
-    /**
      * @notice Function to get the percentage of the range
      * @param amount0 Amount of token0 (must be in token0 units)
      * @param amount1 Amount of token1 (must be in token1 units)
@@ -140,13 +136,6 @@ interface IPositionManager {
      * @dev The ticks are the same if the contract is not in position
      */
     function getTickRange() external view returns (int24, int24);
-
-    /**
-     * @notice Function to set the receiver address and fee percentage
-     * @param receiverAddress_ Address of the receiver of the fees
-     * @param receiverFeePercentage_ Percentage of the funds destined to the receiver
-     */
-    function setReceiverData(address receiverAddress_, uint256 receiverFeePercentage_) external;
 
     /**
      * @notice Function to set the slippage percentage
