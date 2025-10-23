@@ -200,6 +200,12 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         return $._positionManagersData[positionManager]._depositors.values();
     }
 
+    function getReceiverData(address positionManager) external view returns (address, uint256) {
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
+        PositionManagerData storage pmData = $._positionManagersData[positionManager];
+        return (pmData.receiverAddress, pmData.receiverPercentage);
+    }
+
     function getDefaultAdminRole() external pure returns (bytes32) {
         return DEFAULT_ADMIN_ROLE;
     }
