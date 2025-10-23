@@ -24,11 +24,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      blockGasLimit: 140000000, // BSC block gas limit
-      forking: {
-        url: `${process.env.BSC_RPC_URL}`,
-        blockNumber: 63106587,
-      },
+      forking: forkData(process.env.FORKING_NETWORK_ID),
     },
     bsc: {
       url: process.env.BSC_RPC_URL ? process.env.BSC_RPC_URL : "",
@@ -37,7 +33,7 @@ const config: HardhatUserConfig = {
     }
   },
   etherscan: {
-    apiKey: process.env.BSC_ETHERSCAN_API_KEY ? process.env.BSC_ETHERSCAN_API_KEY : "",
+    apiKey: process.env.ETHERSCAN_API_KEY ? process.env.ETHERSCAN_API_KEY : "",
     customChains: [
     {
       network: "bsc",
@@ -57,3 +53,25 @@ const config: HardhatUserConfig = {
 };
 
 export default config;
+
+function forkData(networkId: string | undefined): any {
+  let url: string;
+  let blockNumber: number;
+
+  switch (networkId) {
+    case "56":
+      console.log("Using BSC rpc");
+      url = `${process.env.BSC_RPC_URL}`;
+      blockNumber = 63106587;
+      break;
+
+    default:
+      console.log("Defaulting to Hardhat without forking");
+      return;
+  }
+
+  return {
+    url: url,
+    blockNumber: blockNumber,
+  };
+}
