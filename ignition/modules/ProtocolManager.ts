@@ -9,10 +9,7 @@ export default buildModule(contractName, (m) => {
     const contract = m.contract(contractName, [m.getParameter("_baseToken")]);
 
     // encode init data
-    const initDataEncoded = m.encodeFunctionCall(contract, "initialize", [
-        m.getParameter("_locker"),
-        m.getParameter("_poolLibrary")
-    ]);
+    const initDataEncoded = m.encodeFunctionCall(contract, "initialize", [m.getParameter("_locker"), m.getParameter("_poolLibrary")]);
 
     const proxy = m.contract(proxyContractName, [contract, proxyAdminOwner, initDataEncoded]);
 
