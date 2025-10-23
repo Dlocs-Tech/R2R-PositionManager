@@ -169,6 +169,18 @@ export default async function suite(): Promise<void> {
             expect(setReceiverPercentage).to.equal(receiverPercentage);
         });
 
+        it("Should revert if random user tries to set locker or pool library", async () => {
+            const randomUser = user2;
+
+            await expect(protocolManager.connect(randomUser).setLocker(user3.address))
+                .to.be.revertedWithCustomError(protocolManager, "AccessControlUnauthorizedAccount")
+                .withArgs(randomUser.address, defaultAdminRole);
+
+            await expect(protocolManager.connect(randomUser).setPoolLibrary(user3.address))
+                .to.be.revertedWithCustomError(protocolManager, "AccessControlUnauthorizedAccount")
+                .withArgs(randomUser.address, defaultAdminRole);
+        });
+
         it("Should revert when locker is zero address", async () => {
             await expect(protocolManager.connect(owner).setLocker(ethers.ZeroAddress))
                 .to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
