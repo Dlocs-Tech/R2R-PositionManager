@@ -25,6 +25,9 @@ export default async function suite(): Promise<void> {
         let poolLibrary: PoolLibrary;
         let baseToken: IERC20;
 
+        let defaultAdminRole: string;
+        let managerRole: string;
+
         let snap: string;
 
         before(async () => {
@@ -61,6 +64,11 @@ export default async function suite(): Promise<void> {
                 }
             });
             protocolManager = await ethers.getContractAt("ProtocolManager", await protocolManagerProxy.getAddress());
+
+            /// Get roles ///
+
+            defaultAdminRole = await protocolManager.getDefaultAdminRole();
+            managerRole = await protocolManager.MANAGER_ROLE();
         });
 
         beforeEach(async function () {
@@ -86,7 +94,7 @@ export default async function suite(): Promise<void> {
         });
 
         it("Should owner be admin", async () => {
-            expect(await protocolManager.hasRole(await protocolManager.getDefaultAdminRole(), owner.address)).to.be.true;
+            expect(await protocolManager.hasRole(defaultAdminRole, owner.address)).to.be.true;
         });
     });
 }
