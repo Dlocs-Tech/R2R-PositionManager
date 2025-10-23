@@ -11,7 +11,7 @@
     "test": "hardhat test ./tests/index.spec.ts",
     "test-arb": "FORKING_NETWORK_ID=56 hardhat test ./tests/index_bsc.spec.ts",
     "coverage": "cross-env hardhat coverage",
-    "lint": "prettier --write {contracts,tests}/**/*.{sol,ts}"
+    "lint": "prettier --write {contracts,tests,ignition/modules}/**/*.{sol,ts}"
   },
   "devDependencies": {
     "@aperture_finance/uni-v3-lib": "^3.0.3",
