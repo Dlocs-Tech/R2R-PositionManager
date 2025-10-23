@@ -60,8 +60,8 @@ export default async function suite(): Promise<void> {
                         _baseToken: await baseToken.getAddress(),
                         _locker: await locker.getAddress(),
                         _poolLibrary: await poolLibrary.getAddress(),
-                    }
-                }
+                    },
+                },
             });
             protocolManager = await ethers.getContractAt("ProtocolManager", await protocolManagerProxy.getAddress());
 
@@ -154,14 +154,9 @@ export default async function suite(): Promise<void> {
             const receiverPercentage = ethers.parseEther("0.25"); // 25%
 
             // Set receiver data
-            await expect(protocolManager.connect(poolManager).setReceiverData(
-                receiverAddress,
-                receiverPercentage
-            )).to.emit(protocolManager, "ReceiverDataSet").withArgs(
-                poolManager.address,
-                receiverAddress,
-                receiverPercentage
-            );
+            await expect(protocolManager.connect(poolManager).setReceiverData(receiverAddress, receiverPercentage))
+                .to.emit(protocolManager, "ReceiverDataSet")
+                .withArgs(poolManager.address, receiverAddress, receiverPercentage);
 
             // Get and check receiver data
             const [setReceiverAddress, setReceiverPercentage] = await protocolManager.getReceiverData(poolManager.address);
@@ -182,29 +177,27 @@ export default async function suite(): Promise<void> {
         });
 
         it("Should revert when locker is zero address", async () => {
-            await expect(protocolManager.connect(owner).setLocker(ethers.ZeroAddress))
-                .to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
+            await expect(protocolManager.connect(owner).setLocker(ethers.ZeroAddress)).to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
         });
 
         it("Should set a new locker", async () => {
             const newLocker = user4;
 
-            await expect(protocolManager.connect(owner).setLocker(newLocker.address))
-                .to.emit(protocolManager, "LockerUpdated").withArgs(newLocker.address);
+            await expect(protocolManager.connect(owner).setLocker(newLocker.address)).to.emit(protocolManager, "LockerUpdated").withArgs(newLocker.address);
 
             expect(await protocolManager.locker()).to.equal(newLocker.address);
         });
 
         it("Should revert when pool library is zero address", async () => {
-            await expect(protocolManager.connect(owner).setPoolLibrary(ethers.ZeroAddress))
-                .to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
+            await expect(protocolManager.connect(owner).setPoolLibrary(ethers.ZeroAddress)).to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
         });
 
         it("Should set a new pool library", async () => {
             const newPoolLibrary = user4;
 
             await expect(protocolManager.connect(owner).setPoolLibrary(newPoolLibrary.address))
-                .to.emit(protocolManager, "PoolLibraryUpdated").withArgs(newPoolLibrary.address);
+                .to.emit(protocolManager, "PoolLibraryUpdated")
+                .withArgs(newPoolLibrary.address);
 
             expect(await protocolManager.poolLibrary()).to.equal(newPoolLibrary.address);
         });
