@@ -96,5 +96,28 @@ export default async function suite(): Promise<void> {
         it("Should owner be admin", async () => {
             expect(await protocolManager.hasRole(defaultAdminRole, owner.address)).to.be.true;
         });
+
+        it("Should position manager register depositors", async () => {
+            const poolManager = user1;
+            const depositor1 = user2;
+            const depositor2 = user3;
+
+            // Register depositor
+            await protocolManager.connect(poolManager).registerDeposit(depositor1.address);
+
+            // Check depositor is registered
+            const usersSet = await protocolManager.usersSet(poolManager.address);
+            expect(usersSet.length).to.equal(1);
+            expect(usersSet).to.include(depositor1.address);
+
+            // Register another depositor
+            await protocolManager.connect(poolManager).registerDeposit(depositor2.address);
+
+            // Check both depositors are registered
+            const updatedUsersSet = await protocolManager.usersSet(poolManager.address);
+            expect(updatedUsersSet.length).to.equal(2);
+            expect(updatedUsersSet).to.include(depositor1.address);
+            expect(updatedUsersSet).to.include(depositor2.address);
+        });
     });
 }
