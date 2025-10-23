@@ -104,7 +104,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         // Event not needed since PositionManager emits Deposit event
     }
 
-    function registerWithdraw(address depositor) external {
+    function registerWithdrawal(address depositor) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
         $._positionManagersData[msg.sender]._depositors.remove(depositor);

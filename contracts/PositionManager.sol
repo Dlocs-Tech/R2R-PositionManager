@@ -179,7 +179,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         require(shares > 0, InsufficientBalance());
 
-        _protocolManager.registerWithdraw(msg.sender);
+        _protocolManager.registerWithdrawal(msg.sender);
 
         // Contract is in position
         if (_tickLower != _tickUpper) {
