@@ -112,7 +112,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         // Event not needed since PositionManager emits Withdraw event
     }
 
-    function registerReceiverData(address receiverAddress, uint256 receiverPercentage) external {
+    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
         PositionManagerData storage pmData = $._positionManagersData[msg.sender];

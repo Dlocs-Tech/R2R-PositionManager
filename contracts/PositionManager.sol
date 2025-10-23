@@ -644,7 +644,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
     function _setReceiverData(address receiverAddress, uint256 receiverPercentage) private {
         require(receiverAddress != address(0) && receiverPercentage <= MAX_PERCENTAGE && receiverPercentage != 0, InvalidInput());
 
-        _protocolManager.registerReceiverData(receiverAddress, receiverPercentage);
+        _protocolManager.setReceiverData(receiverAddress, receiverPercentage);
     }
 
     /// Callback functions

@@ -23,5 +23,5 @@ interface IProtocolManager is IAccessControl {
 
     function baseToken() external view returns (IERC20);
 
-    function registerReceiverData(address receiverAddress, uint256 receiverPercentage) external;
+    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external;
 }
