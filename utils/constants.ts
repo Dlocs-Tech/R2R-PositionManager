@@ -4,8 +4,7 @@ import { ethers } from "hardhat";
 dotenv.config();
 
 export const roles: any = {
-    DEFAULT_ADMIN_ROLE: "0x0000000000000000000000000000000000000000000000000000000000000000",
-    POSITION_MANAGER_ROLE: "0xf33d40e6c84e251a3e1cff80c569d5646a4f006b85649b53b993dadc59eb3748"
+    DEFAULT_ADMIN_ROLE: ethers.ZeroHash,
 };
 
 // BSC Addresses
