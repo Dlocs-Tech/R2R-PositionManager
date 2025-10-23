@@ -32,7 +32,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
     event RewardCollected(address indexed user, address indexed positionManager, uint256 amount);
 
-    event ReceiverDataRegistered(address indexed positionManager, address receiverAddress, uint256 receiverPercentage);
+    event ReceiverDataSet(address indexed positionManager, address receiverAddress, uint256 receiverPercentage);
 
     event LockerUpdated(address newLocker);
 
@@ -120,7 +120,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         pmData.receiverAddress = receiverAddress;
         pmData.receiverPercentage = receiverPercentage;
 
-        emit ReceiverDataRegistered(msg.sender, receiverAddress, receiverPercentage);
+        emit ReceiverDataSet(msg.sender, receiverAddress, receiverPercentage);
     }
 
     function distributeRewards(address positionManager) external {
