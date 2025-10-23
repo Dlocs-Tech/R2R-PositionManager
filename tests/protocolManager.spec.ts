@@ -97,7 +97,7 @@ export default async function suite(): Promise<void> {
             expect(await protocolManager.hasRole(defaultAdminRole, owner.address)).to.be.true;
         });
 
-        it("Should position manager register depositors", async () => {
+        it("Should position manager register deposits", async () => {
             const poolManager = user1;
             const depositor1 = user2;
             const depositor2 = user3;
@@ -118,6 +118,34 @@ export default async function suite(): Promise<void> {
             expect(updatedUsersSet.length).to.equal(2);
             expect(updatedUsersSet).to.include(depositor1.address);
             expect(updatedUsersSet).to.include(depositor2.address);
+        });
+
+        it("Should position manager register withdrawals", async () => {
+            const poolManager = user1;
+            const depositor1 = user2;
+            const depositor2 = user3;
+
+            // Register depositors
+            await protocolManager.connect(poolManager).registerDeposit(depositor1.address);
+            await protocolManager.connect(poolManager).registerDeposit(depositor2.address);
+
+            // Unregister depositor1
+            await protocolManager.connect(poolManager).registerWithdrawal(depositor1.address);
+
+            // Check depositor1 is unregistered and depositor2 is still registered
+            let usersSet = await protocolManager.usersSet(poolManager.address);
+            expect(usersSet.length).to.equal(1);
+            expect(usersSet).to.not.include(depositor1.address);
+            expect(usersSet).to.include(depositor2.address);
+
+            // Unregister depositor2
+            await protocolManager.connect(poolManager).registerWithdrawal(depositor2.address);
+
+            // Check both depositors are unregistered
+            usersSet = await protocolManager.usersSet(poolManager.address);
+            expect(usersSet.length).to.equal(0);
+            expect(usersSet).to.not.include(depositor1.address);
+            expect(usersSet).to.not.include(depositor2.address);
         });
     });
 }
