@@ -147,5 +147,26 @@ export default async function suite(): Promise<void> {
             expect(usersSet).to.not.include(depositor1.address);
             expect(usersSet).to.not.include(depositor2.address);
         });
+
+        it("Should set receiver data correctly", async () => {
+            const poolManager = user1;
+            const receiverAddress = receiver.address;
+            const receiverPercentage = ethers.parseEther("0.25"); // 25%
+
+            // Set receiver data
+            await expect(protocolManager.connect(poolManager).setReceiverData(
+                receiverAddress,
+                receiverPercentage
+            )).to.emit(protocolManager, "ReceiverDataSet").withArgs(
+                poolManager.address,
+                receiverAddress,
+                receiverPercentage
+            );
+
+            // Get and check receiver data
+            const [setReceiverAddress, setReceiverPercentage] = await protocolManager.getReceiverData(poolManager.address);
+            expect(setReceiverAddress).to.equal(receiverAddress);
+            expect(setReceiverPercentage).to.equal(receiverPercentage);
+        });
     });
 }
