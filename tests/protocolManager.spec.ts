@@ -168,5 +168,33 @@ export default async function suite(): Promise<void> {
             expect(setReceiverAddress).to.equal(receiverAddress);
             expect(setReceiverPercentage).to.equal(receiverPercentage);
         });
+
+        it("Should revert when locker is zero address", async () => {
+            await expect(protocolManager.connect(owner).setLocker(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
+        });
+
+        it("Should set a new locker", async () => {
+            const newLocker = user4;
+
+            await expect(protocolManager.connect(owner).setLocker(newLocker.address))
+                .to.emit(protocolManager, "LockerUpdated").withArgs(newLocker.address);
+
+            expect(await protocolManager.locker()).to.equal(newLocker.address);
+        });
+
+        it("Should revert when pool library is zero address", async () => {
+            await expect(protocolManager.connect(owner).setPoolLibrary(ethers.ZeroAddress))
+                .to.be.revertedWithCustomError(protocolManager, "ZeroAddress");
+        });
+
+        it("Should set a new pool library", async () => {
+            const newPoolLibrary = user4;
+
+            await expect(protocolManager.connect(owner).setPoolLibrary(newPoolLibrary.address))
+                .to.emit(protocolManager, "PoolLibraryUpdated").withArgs(newPoolLibrary.address);
+
+            expect(await protocolManager.poolLibrary()).to.equal(newPoolLibrary.address);
+        });
     });
 }
