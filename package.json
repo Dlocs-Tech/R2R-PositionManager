@@ -8,7 +8,8 @@
   "license": "MIT",
   "scripts": {
     "build": "npx hardhat compile",
-    "test": "npx hardhat test tests/index.spec.ts",
+    "test": "hardhat test ./tests/index.spec.ts",
+    "test-arb": "FORKING_NETWORK_ID=56 hardhat test ./tests/index_bsc.spec.ts",
     "coverage": "cross-env hardhat coverage",
     "lint": "prettier --write {contracts,tests}/**/*.{sol,ts}"
   },
