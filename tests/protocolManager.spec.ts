@@ -71,9 +71,17 @@ export default async function suite(): Promise<void> {
             await ethers.provider.send("evm_revert", [snap]);
         });
 
-        it("Should baseToken be correctly initialized", async () => {
-            // Replace with actual test logic
+        it("Should baseToken be correctly set", async () => {
             expect(await protocolManager.baseToken()).to.equal(await baseToken.getAddress());
+        });
+
+        it("Should locker and poolLibrary be correctly set", async () => {
+            expect(await protocolManager.locker()).to.equal(await locker.getAddress());
+            expect(await protocolManager.poolLibrary()).to.equal(await poolLibrary.getAddress());
+        });
+
+        it("Should owner be admin", async () => {
+            expect(await protocolManager.hasRole(roles.DEFAULT_ADMIN_ROLE, owner.address)).to.be.true;
         });
     });
 }
