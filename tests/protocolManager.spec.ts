@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {ethers, ignition} from "hardhat";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import {ProtocolManager, IERC20, Locker, PoolLibrary} from "../typechain-types";
-import {roles, percentages} from "./../utils/constants";
+import {percentages} from "./../utils/constants";
 
 import ProtocolManagerModule from "../ignition/modules/ProtocolManager";
 import LockerModule from "../ignition/modules/Locker";
@@ -80,8 +80,13 @@ export default async function suite(): Promise<void> {
             expect(await protocolManager.poolLibrary()).to.equal(await poolLibrary.getAddress());
         });
 
+        it("Should getDefaultAdminRole return correct value", async () => {
+            const defaultAdminRole = await protocolManager.getDefaultAdminRole();
+            expect(defaultAdminRole).to.equal(ethers.ZeroHash);
+        });
+
         it("Should owner be admin", async () => {
-            expect(await protocolManager.hasRole(roles.DEFAULT_ADMIN_ROLE, owner.address)).to.be.true;
+            expect(await protocolManager.hasRole(await protocolManager.getDefaultAdminRole(), owner.address)).to.be.true;
         });
     });
 }
