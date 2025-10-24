@@ -45,9 +45,7 @@ export const contractAddresses: any = {
 
 export const percentages: any = {
     MAX_PERCENTAGE: ethers.parseEther("1"),
-    ReceiverPercentage: 350000, // 35%
-    ExclusiveManagerPercentage: 50000, // 5%
-    ReceiverPercentageInExclusiveManagerVersion: 315789 // 31.5789%
+    RECEIVER_PERCENTAGE: ethers.parseEther("0.35"), // 35%
 };
 
 export const initValues_PositionManagerDistributor: any = {
