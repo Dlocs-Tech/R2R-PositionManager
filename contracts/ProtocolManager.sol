@@ -112,17 +112,6 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         // Event not needed since PositionManager emits Withdraw event
     }
 
-    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external {
-        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-
-        PositionManagerData storage pmData = $._positionManagersData[msg.sender];
-
-        pmData.receiverAddress = receiverAddress;
-        pmData.receiverPercentage = receiverPercentage;
-
-        emit ReceiverDataSet(msg.sender, receiverAddress, receiverPercentage);
-    }
-
     function distributeRewards(address positionManager) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
@@ -184,7 +173,36 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         return $._positionManagersData[positionManager]._claimableBalances[user];
     }
+    
+    function setReceiverData(address receiverAddress, uint256 receiverPercentage) external {
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
+        PositionManagerData storage pmData = $._positionManagersData[msg.sender];
+
+        pmData.receiverAddress = receiverAddress;
+        pmData.receiverPercentage = receiverPercentage;
+
+        emit ReceiverDataSet(msg.sender, receiverAddress, receiverPercentage);
+    }
+
+    function setLocker(address newLocker) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newLocker != address(0), ZeroAddress());
+
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
+        $._locker = ILocker(newLocker);
+
+        emit LockerUpdated(newLocker);
+    }
+
+    function setPoolLibrary(address newPoolLibrary) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newPoolLibrary != address(0), ZeroAddress());
+
+        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
+        $._poolLibrary = IPoolLibrary(newPoolLibrary);
+
+        emit PoolLibraryUpdated(newPoolLibrary);
+    }
+    
     function locker() external view returns (address) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         return address($._locker);
@@ -208,23 +226,5 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
     function getDefaultAdminRole() external pure returns (bytes32) {
         return DEFAULT_ADMIN_ROLE;
-    }
-
-    function setLocker(address newLocker) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newLocker != address(0), ZeroAddress());
-
-        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        $._locker = ILocker(newLocker);
-
-        emit LockerUpdated(newLocker);
-    }
-
-    function setPoolLibrary(address newPoolLibrary) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(newPoolLibrary != address(0), ZeroAddress());
-
-        ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
-        $._poolLibrary = IPoolLibrary(newPoolLibrary);
-
-        emit PoolLibraryUpdated(newPoolLibrary);
     }
 }
