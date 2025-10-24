@@ -2,7 +2,7 @@
 import {expect} from "chai";
 import {ethers, ignition} from "hardhat";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
-import {ProtocolManager, IERC20, Locker, PoolLibrary} from "../typechain-types";
+import {ProtocolManager, ERC20Mock, Locker, PoolLibrary} from "../typechain-types";
 import {percentages} from "./../utils/constants";
 
 import ProtocolManagerModule from "../ignition/modules/ProtocolManager";
@@ -23,7 +23,7 @@ export default async function suite(): Promise<void> {
         let protocolManager: ProtocolManager;
         let locker: Locker;
         let poolLibrary: PoolLibrary;
-        let baseToken: IERC20;
+        let baseToken: ERC20Mock;
 
         let defaultAdminRole: string;
         let managerRole: string;
@@ -35,7 +35,7 @@ export default async function suite(): Promise<void> {
 
             /// Deploying contracts ///
 
-            // Deploy base token
+            // Deploy base token mock
             const ERC20MockFactory = await ethers.getContractFactory("ERC20Mock");
             baseToken = await ERC20MockFactory.deploy();
 
@@ -69,6 +69,10 @@ export default async function suite(): Promise<void> {
 
             defaultAdminRole = await protocolManager.getDefaultAdminRole();
             managerRole = await protocolManager.MANAGER_ROLE();
+
+            /// Change ownership ///
+
+            await locker.connect(owner).transferOwnership(await protocolManager.getAddress());
         });
 
         beforeEach(async function () {
@@ -200,6 +204,12 @@ export default async function suite(): Promise<void> {
                 .withArgs(newPoolLibrary.address);
 
             expect(await protocolManager.poolLibrary()).to.equal(newPoolLibrary.address);
+        });
+
+        it("Should revert if ProtocolManager tries to distribute rewards with zero balance", async () => {
+            const poolManager = user1;
+
+            await expect(protocolManager.distributeRewards(poolManager.address)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
         });
     });
 }
