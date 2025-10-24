@@ -9,7 +9,7 @@ import ProtocolManagerModule from "../ignition/modules/ProtocolManager";
 import LockerModule from "../ignition/modules/Locker";
 import PoolLibraryModule from "../ignition/modules/PoolLibrary";
 
-const maxPercentage = percentages.MAX_PERCENTAGE;
+const maxPercentage: bigint = percentages.MAX_PERCENTAGE;
 
 export default async function suite(): Promise<void> {
     describe("ProtocolManager", () => {
@@ -238,12 +238,54 @@ export default async function suite(): Promise<void> {
             const initialReceiverBalance = await baseToken.balanceOf(receiverAddress);
 
             // Distribute rewards
-            await protocolManager.distributeRewards(await positionManager.getAddress());
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress())).to.emit(protocolManager, "RewardsDistributed").withArgs(
+                rewardAmount,
+            );
 
             const finalReceiverBalance = await baseToken.balanceOf(receiverAddress);
             const receiverGained = finalReceiverBalance - initialReceiverBalance;
 
             expect(receiverGained).to.equal(rewardAmount);
+        });
+
+        it("Should register one depositor and distribute rewards correctly", async () => {
+            /// Set up ///
+            const rewardAmount = ethers.parseEther("1000");
+
+            const depositor = user1;
+            const receiverAddress = receiver.address;
+            const receiverPercentage: bigint = percentages.RECEIVER_PERCENTAGE;
+            
+            const receiverInitialBalance = await baseToken.balanceOf(receiverAddress);
+            const receiverExpectedAmount = (rewardAmount * receiverPercentage) / maxPercentage;
+
+            const depositorExpectedAmount = rewardAmount - receiverExpectedAmount;
+
+            // Prepare depositor
+            await positionManager.connect(depositor).mint(ethers.parseEther("1")); // Depositor has all the supply
+            await positionManager.registerDeposit(depositor.address, await protocolManager.getAddress());
+
+            // Set receiver data
+            await positionManager.setReceiverData(receiverAddress, receiverPercentage, await protocolManager.getAddress());
+
+            // Deposit rewards into locker
+            await baseToken.mint(rewardAmount);
+            await baseToken.transfer(await positionManager.getAddress(), rewardAmount);
+
+            await positionManager.deposit(await baseToken.getAddress(), await locker.getAddress());
+
+            /// Test ///
+
+            // Distribute rewards
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress())).to.emit(protocolManager, "RewardsDistributed").withArgs(
+                rewardAmount,
+            );
+
+            const receiverFinalBalance = await baseToken.balanceOf(receiverAddress);
+            const receiverGained = receiverFinalBalance - receiverInitialBalance;
+
+            expect(receiverGained).to.equal(receiverExpectedAmount);
+            expect(await protocolManager.claimableRewards(await positionManager.getAddress(), depositor.address)).to.equal(depositorExpectedAmount);
         });
     });
 }
