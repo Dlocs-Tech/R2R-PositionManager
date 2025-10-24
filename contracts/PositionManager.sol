@@ -124,7 +124,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
             (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-            uint256 poolPrice = _getPoolTokensPrice();
+            (uint160 poolPrice, ) = _priceAndTick();
 
             // If token0 or token1 is baseToken, we need to adjust the amountToken0 or amountToken1
             if (poolData.token0Pool == address(0)) amountToken0 -= depositAmount;
@@ -140,7 +140,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             // Swap token0 or token1 to balance the contract
             _balanceContractTokens(amountToken0, amountToken1, poolPrice);
 
-            poolPrice = _getPoolTokensPrice();
+            (poolPrice, ) = _priceAndTick();
 
             (amountToken0, amountToken1) = _getTotalAmounts();
 
@@ -200,8 +200,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             if (totalSupply() == shares)
                 _tickLower = _tickUpper = 0; // Set the contract to not in position
             else {
+                (uint160 poolPrice, ) = _priceAndTick();
                 // Swap token0 or token1 to balance the contract
-                _balanceContractTokens(amountToken0 - userAmount0, amountToken1 - userAmount1, _getPoolTokensPrice());
+                _balanceContractTokens(amountToken0 - userAmount0, amountToken1 - userAmount1, poolPrice);
 
                 _addLiquidity();
             }
@@ -240,7 +241,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        uint256 poolPrice = _getPoolTokensPrice();
+        (uint160 poolPrice, ) = _priceAndTick();
 
         uint256 contractLiqInToken1 = Math.mulDiv(baseTokenAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
         uint256 contractLiqInToken0 = Math.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
@@ -279,7 +280,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool1Direction
         );
 
-        uint256 poolPrice = _getPoolTokensPrice();
+        (uint160 poolPrice, ) = _priceAndTick();
 
         uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
@@ -314,7 +315,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-        uint256 poolPrice = _getPoolTokensPrice();
+        (uint160 poolPrice, ) = _priceAndTick();
 
         _balanceContractTokens(amountToken0, amountToken1, poolPrice);
 
@@ -333,7 +334,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-        uint256 poolPrice = _getPoolTokensPrice();
+        (uint160 poolPrice, ) = _priceAndTick();
 
         _balanceContractTokens(amountToken0, amountToken1, poolPrice);
 
@@ -440,7 +441,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool1Direction
         );
 
-        uint256 poolPrice = _getPoolTokensPrice();
+        (uint160 poolPrice, ) = _priceAndTick();
 
         uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
 
@@ -556,15 +557,6 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         // the actual amounts collected are returned
         IPancakeV3Pool(poolData.mainPool).collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
-    }
-
-    function _getPoolTokensPrice() private view returns (uint256) {
-        (, int24 tick) = _priceAndTick();
-
-        uint160 sqrtPriceByTick = TickMath.getSqrtRatioAtTick(tick);
-
-        // Price of token0 over token1
-        return Math.mulDiv(uint256(sqrtPriceByTick) * uint256(sqrtPriceByTick), PRECISION, 2 ** (96 * 2));
     }
 
     function _priceAndTick() private view returns (uint160 sqrtPriceX96, int24 tick) {
