@@ -173,7 +173,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         return $._positionManagersData[positionManager]._claimableBalances[user];
     }
-    
+
     function setReceiverData(address receiverAddress, uint256 receiverPercentage) external {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
 
@@ -202,7 +202,7 @@ contract ProtocolManager is IProtocolManager, AccessControlUpgradeable {
 
         emit PoolLibraryUpdated(newPoolLibrary);
     }
-    
+
     function locker() external view returns (address) {
         ProtocolManagerStorage storage $ = _getProtocolManagerStorage();
         return address($._locker);
