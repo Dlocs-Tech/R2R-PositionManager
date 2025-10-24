@@ -2,7 +2,7 @@
 import {expect} from "chai";
 import {ethers, ignition} from "hardhat";
 import {SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
-import {ProtocolManager, ERC20Mock, Locker, PoolLibrary} from "../typechain-types";
+import {ProtocolManager, ERC20Mock, Locker, PoolLibrary, PositionManagerMock} from "../typechain-types";
 import {percentages} from "./../utils/constants";
 
 import ProtocolManagerModule from "../ignition/modules/ProtocolManager";
@@ -24,6 +24,7 @@ export default async function suite(): Promise<void> {
         let locker: Locker;
         let poolLibrary: PoolLibrary;
         let baseToken: ERC20Mock;
+        let positionManager: PositionManagerMock;
 
         let defaultAdminRole: string;
         let managerRole: string;
@@ -38,6 +39,10 @@ export default async function suite(): Promise<void> {
             // Deploy base token mock
             const ERC20MockFactory = await ethers.getContractFactory("ERC20Mock");
             baseToken = await ERC20MockFactory.deploy();
+
+            // Deploy position manager mock
+            const PositionManagerMockFactory = await ethers.getContractFactory("PositionManagerMock");
+            positionManager = await PositionManagerMockFactory.deploy();
 
             // Deploy locker
             const {proxy: lockerProxy} = await ignition.deploy(LockerModule, {
@@ -210,6 +215,35 @@ export default async function suite(): Promise<void> {
             const poolManager = user1;
 
             await expect(protocolManager.distributeRewards(poolManager.address)).to.be.revertedWithCustomError(locker, "InsufficientBalance");
+        });
+
+        it("Should distribute all the rewards to receiver if totalSupply of positionManager is zero", async () => {
+            /// Set up ///
+
+            const receiverAddress = receiver.address;
+
+            // Set receiver data
+            await positionManager.setReceiverData(receiverAddress, percentages.RECEIVER_PERCENTAGE, await protocolManager.getAddress());
+
+            // Deposit rewards into locker
+            const rewardAmount = ethers.parseEther("1000");
+
+            await baseToken.mint(rewardAmount);
+            await baseToken.transfer(await positionManager.getAddress(), rewardAmount);
+
+            await positionManager.deposit(await baseToken.getAddress(), await locker.getAddress());
+
+            /// Test ///
+
+            const initialReceiverBalance = await baseToken.balanceOf(receiverAddress);
+
+            // Distribute rewards
+            await protocolManager.distributeRewards(await positionManager.getAddress());
+
+            const finalReceiverBalance = await baseToken.balanceOf(receiverAddress);
+            const receiverGained = finalReceiverBalance - initialReceiverBalance;
+
+            expect(receiverGained).to.equal(rewardAmount);
         });
     });
 }
