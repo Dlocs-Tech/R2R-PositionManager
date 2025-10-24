@@ -27,7 +27,6 @@ export default async function suite(): Promise<void> {
         let positionManager: PositionManagerMock;
 
         let defaultAdminRole: string;
-        let managerRole: string;
 
         let snap: string;
 
@@ -70,10 +69,8 @@ export default async function suite(): Promise<void> {
             });
             protocolManager = await ethers.getContractAt("ProtocolManager", await protocolManagerProxy.getAddress());
 
-            /// Get roles ///
-
+            /// Get admin role
             defaultAdminRole = await protocolManager.getDefaultAdminRole();
-            managerRole = await protocolManager.MANAGER_ROLE();
 
             /// Change ownership ///
 

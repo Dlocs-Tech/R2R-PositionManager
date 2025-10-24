@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npx hardhat compile",
     "test": "hardhat test ./tests/index.spec.ts",
-    "test-arb": "FORKING_NETWORK_ID=56 hardhat test ./tests/index_bsc.spec.ts",
+    "test-bsc": "FORKING_NETWORK_ID=56 hardhat test ./tests/index_bsc.spec.ts",
     "coverage": "cross-env hardhat coverage",
     "lint": "prettier --write {contracts,tests,ignition/modules}/**/*.{sol,ts}"
   },
