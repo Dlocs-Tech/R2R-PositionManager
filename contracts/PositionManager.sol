@@ -124,7 +124,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
             (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-            (uint160 poolPrice, ) = _priceAndTick();
+            uint160 poolPrice = _poolPrice();
 
             // If token0 or token1 is baseToken, we need to adjust the amountToken0 or amountToken1
             if (poolData.token0Pool == address(0)) amountToken0 -= depositAmount;
@@ -140,7 +140,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             // Swap token0 or token1 to balance the contract
             _balanceContractTokens(amountToken0, amountToken1, poolPrice);
 
-            (poolPrice, ) = _priceAndTick();
+            poolPrice = _poolPrice();
 
             (amountToken0, amountToken1) = _getTotalAmounts();
 
@@ -200,9 +200,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             if (totalSupply() == shares)
                 _tickLower = _tickUpper = 0; // Set the contract to not in position
             else {
-                (uint160 poolPrice, ) = _priceAndTick();
                 // Swap token0 or token1 to balance the contract
-                _balanceContractTokens(amountToken0 - userAmount0, amountToken1 - userAmount1, poolPrice);
+                _balanceContractTokens(amountToken0 - userAmount0, amountToken1 - userAmount1, _poolPrice());
 
                 _addLiquidity();
             }
@@ -241,7 +240,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         uint256 token1Price = _getChainlinkPrice() * PRECISION;
 
-        (uint160 poolPrice, ) = _priceAndTick();
+        uint160 poolPrice = _poolPrice();
 
         uint256 contractLiqInToken1 = Math.mulDiv(baseTokenAmount, (PRECISION) * CHAINLINK_PRECISION, token1Price);
         uint256 contractLiqInToken0 = Math.mulDiv(contractLiqInToken1, PRECISION, poolPrice);
@@ -280,9 +279,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool1Direction
         );
 
-        (uint160 poolPrice, ) = _priceAndTick();
-
-        uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
+        uint256 amountOutMin = Math.mulDiv(amountToken0, _poolPrice(), PRECISION); // amountOutMin in token0 to token1
 
         _swapUsingPool(
             IPancakeV3Pool(poolData.token0Pool),
@@ -315,9 +312,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-        (uint160 poolPrice, ) = _priceAndTick();
-
-        _balanceContractTokens(amountToken0, amountToken1, poolPrice);
+        _balanceContractTokens(amountToken0, amountToken1, _poolPrice());
 
         _addLiquidity();
 
@@ -334,9 +329,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
-        (uint160 poolPrice, ) = _priceAndTick();
-
-        _balanceContractTokens(amountToken0, amountToken1, poolPrice);
+        _balanceContractTokens(amountToken0, amountToken1, _poolPrice());
 
         _addLiquidity();
 
@@ -373,9 +366,9 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
 
     /// @inheritdoc IPositionManager
     function getRangePercentage(uint256 amount0, uint256 amount1, uint256 poolPrice) public view returns (uint256) {
-        (uint160 sqrtPrice, int24 tick) = _priceAndTick();
+        uint160 sqrtPrice = _poolPrice();
 
-        uint160 sqrtRatioX96 = TickMath.getSqrtRatioAtTick(tick);
+        uint160 sqrtRatioX96 = sqrtPrice;
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(_tickLower);
         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(_tickUpper);
 
@@ -441,9 +434,7 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
             !_pool1Direction
         );
 
-        (uint160 poolPrice, ) = _priceAndTick();
-
-        uint256 amountOutMin = Math.mulDiv(amountToken0, poolPrice, PRECISION); // amountOutMin in token0 to token1
+        uint256 amountOutMin = Math.mulDiv(amountToken0, _poolPrice(), PRECISION); // amountOutMin in token0 to token1
 
         amountToken0 = _swapUsingPool(
             IPancakeV3Pool(poolData.token0Pool),
@@ -523,10 +514,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         (uint256 amountToken0, uint256 amountToken1) = _getTotalAmounts();
 
         // Then we fetch how much liquidity we get for adding at the main position ticks with our token balances
-        (uint160 sqrtPrice, ) = _priceAndTick();
-
         uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtPrice,
+            _poolPrice(),
             TickMath.getSqrtRatioAtTick(_tickLower),
             TickMath.getSqrtRatioAtTick(_tickUpper),
             amountToken0,
@@ -559,8 +548,8 @@ contract PositionManager is IPositionManager, IPancakeV3SwapCallback, FeeManagem
         IPancakeV3Pool(poolData.mainPool).collect(address(this), _tickLower, _tickUpper, MAX_UINT128, MAX_UINT128);
     }
 
-    function _priceAndTick() private view returns (uint160 sqrtPriceX96, int24 tick) {
-        (sqrtPriceX96, tick, , , , , ) = IPancakeV3Pool(poolData.mainPool).slot0();
+    function _poolPrice() private view returns (uint160 sqrtPriceX96) {
+        (sqrtPriceX96, , , , , , ) = IPancakeV3Pool(poolData.mainPool).slot0();
     }
 
     function _getTotalAmounts() private view returns (uint256 total0, uint256 total1) {
