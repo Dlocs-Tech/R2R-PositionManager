@@ -356,5 +356,58 @@ export default async function suite(): Promise<void> {
                 expect(claimableRewards).to.equal(expectedAmount);
             });
         });
+
+        it("Should revert if depositor tries to claim with zero rewards", async () => {
+            const depositor = user1;
+
+            await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress()))
+                .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance").withArgs(
+                    depositor.address, await positionManager.getAddress()
+                );
+        });
+
+        it("Should let depositor collect rewards", async () => {
+            /// Set up ///
+            const rewardAmount = ethers.parseEther("1000");
+
+            const depositor = user1;
+            const receiverAddress = receiver.address;
+            const receiverPercentage: bigint = percentages.RECEIVER_PERCENTAGE;
+
+            const depositorExpectedAmount = rewardAmount - (rewardAmount * receiverPercentage) / maxPercentage;
+
+            // Prepare depositor
+            await positionManager.connect(depositor).mint(ethers.parseEther("1")); // Depositor has all the supply
+            await positionManager.registerDeposit(depositor.address, await protocolManager.getAddress());
+
+            // Set receiver data
+            await positionManager.setReceiverData(receiverAddress, receiverPercentage, await protocolManager.getAddress());
+
+            // Deposit rewards into locker
+            await baseToken.mint(rewardAmount);
+            await baseToken.transfer(await positionManager.getAddress(), rewardAmount);
+
+            await positionManager.deposit(await baseToken.getAddress(), await locker.getAddress());
+
+            // Distribute rewards
+            await protocolManager.distributeRewards(await positionManager.getAddress());
+
+            // Collect rewards
+            const depositorInitialBalance = await baseToken.balanceOf(depositor.address);
+
+            await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress())).to.emit(
+                protocolManager, "RewardCollected"
+            ).withArgs(depositor.address, await positionManager.getAddress(), depositorExpectedAmount);
+
+            const depositorFinalBalance = await baseToken.balanceOf(depositor.address);
+
+            expect(depositorFinalBalance - depositorInitialBalance).to.equal(depositorExpectedAmount);
+
+            // Revert if try to re-collect
+            await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress()))
+                .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance").withArgs(
+                    depositor.address, await positionManager.getAddress()
+                );
+        });
     });
 }
