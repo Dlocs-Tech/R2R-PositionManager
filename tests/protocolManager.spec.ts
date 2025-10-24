@@ -310,12 +310,12 @@ export default async function suite(): Promise<void> {
             });
 
             // Prepare depositors
-            depositedAmounts.forEach(async (amount, index) => {
-                const depositor = depositors[index];
-                await positionManager.connect(depositor).mint(amount);
+            for (let i = 0; i < depositors.length; i++) {
+                const depositor = depositors[i];
+                await positionManager.connect(depositor).mint(depositedAmounts[i]);
 
                 await positionManager.registerDeposit(depositor.address, await protocolManager.getAddress());
-            });
+            }
 
             // Set receiver data
             await positionManager.setReceiverData(receiverAddress, receiverPercentage, await protocolManager.getAddress());
@@ -339,12 +339,13 @@ export default async function suite(): Promise<void> {
             expect(receiverGained).to.equal(receiverExpectedAmount);
 
             // Check each depositor's claimable rewards
-            depositors.forEach(async (depositor, index) => {
-                const expectedAmount = depositorExpectedAmounts[index];
+            for (let i = 0; i < depositors.length; i++) {
+                const depositor = depositors[i];
+                const expectedAmount = depositorExpectedAmounts[i];
                 const claimableRewards = await protocolManager.claimableRewards(await positionManager.getAddress(), depositor.address);
 
                 expect(claimableRewards).to.equal(expectedAmount);
-            });
+            }
         });
 
         it("Should revert if depositor tries to claim with zero rewards", async () => {
@@ -396,6 +397,68 @@ export default async function suite(): Promise<void> {
             await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress()))
                 .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance")
                 .withArgs(depositor.address, await positionManager.getAddress());
+        });
+
+        it("Should multiple depositors collect rewards", async () => {
+            /// Set up ///
+            const rewardAmount = ethers.parseEther("1000");
+
+            const depositors: SignerWithAddress[] = [user1, user2, user3, user4];
+            const receiverAddress = receiver.address;
+            const receiverPercentage: bigint = percentages.RECEIVER_PERCENTAGE;
+
+            const receiverInitialBalance = await baseToken.balanceOf(receiverAddress);
+            const receiverExpectedAmount = (rewardAmount * receiverPercentage) / maxPercentage;
+
+            const depositedAmounts: bigint[] = [ethers.parseEther("1"), ethers.parseEther("3"), ethers.parseEther("6"), ethers.parseEther("10")];
+            const totalDepositedAmount = depositedAmounts.reduce((a, b) => a + b, BigInt(0));
+
+            const depositorExpectedAmounts: bigint[] = depositedAmounts.map((amount) => {
+                return ((rewardAmount - receiverExpectedAmount) * amount) / totalDepositedAmount;
+            });
+
+            // Prepare depositors
+            for (let i = 0; i < depositors.length; i++) {
+                const depositor = depositors[i];
+                await positionManager.connect(depositor).mint(depositedAmounts[i]);
+
+                await positionManager.registerDeposit(depositor.address, await protocolManager.getAddress());
+            }
+
+            // Set receiver data
+            await positionManager.setReceiverData(receiverAddress, receiverPercentage, await protocolManager.getAddress());
+
+            // Deposit rewards into locker
+            await baseToken.mint(rewardAmount);
+            await baseToken.transfer(await positionManager.getAddress(), rewardAmount);
+
+            await positionManager.deposit(await baseToken.getAddress(), await locker.getAddress());
+
+            /// Test ///
+
+            // Distribute rewards
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress()))
+                .to.emit(protocolManager, "RewardsDistributed")
+                .withArgs(rewardAmount);
+
+            const receiverFinalBalance = await baseToken.balanceOf(receiverAddress);
+            const receiverGained = receiverFinalBalance - receiverInitialBalance;
+
+            expect(receiverGained).to.equal(receiverExpectedAmount);
+
+            // Check each depositor's claimable rewards
+            for (let i = 0; i < depositors.length; i++) {
+                const depositor = depositors[i];
+                const expectedAmount = depositorExpectedAmounts[i];
+
+                const balanceBefore = await baseToken.balanceOf(depositor.address);
+
+                await protocolManager.connect(depositor).collectRewards(await positionManager.getAddress());
+
+                const balanceAfter = await baseToken.balanceOf(depositor.address);
+
+                expect(balanceAfter - balanceBefore).to.equal(expectedAmount);
+            }
         });
     });
 }
