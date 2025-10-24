@@ -286,6 +286,9 @@ export default async function suite(): Promise<void> {
 
             expect(receiverGained).to.equal(receiverExpectedAmount);
             expect(await protocolManager.claimableRewards(await positionManager.getAddress(), depositor.address)).to.equal(depositorExpectedAmount);
+
+            // Revert if try to re-distribute
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress())).to.reverted;
         });
 
         it("Should register multiple depositors and distribute rewards correctly", async () => {
