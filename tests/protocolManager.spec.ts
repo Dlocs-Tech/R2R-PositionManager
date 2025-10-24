@@ -238,9 +238,9 @@ export default async function suite(): Promise<void> {
             const initialReceiverBalance = await baseToken.balanceOf(receiverAddress);
 
             // Distribute rewards
-            await expect(protocolManager.distributeRewards(await positionManager.getAddress())).to.emit(protocolManager, "RewardsDistributed").withArgs(
-                rewardAmount,
-            );
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress()))
+                .to.emit(protocolManager, "RewardsDistributed")
+                .withArgs(rewardAmount);
 
             const finalReceiverBalance = await baseToken.balanceOf(receiverAddress);
             const receiverGained = finalReceiverBalance - initialReceiverBalance;
@@ -255,7 +255,7 @@ export default async function suite(): Promise<void> {
             const depositor = user1;
             const receiverAddress = receiver.address;
             const receiverPercentage: bigint = percentages.RECEIVER_PERCENTAGE;
-            
+
             const receiverInitialBalance = await baseToken.balanceOf(receiverAddress);
             const receiverExpectedAmount = (rewardAmount * receiverPercentage) / maxPercentage;
 
@@ -277,9 +277,9 @@ export default async function suite(): Promise<void> {
             /// Test ///
 
             // Distribute rewards
-            await expect(protocolManager.distributeRewards(await positionManager.getAddress())).to.emit(protocolManager, "RewardsDistributed").withArgs(
-                rewardAmount,
-            );
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress()))
+                .to.emit(protocolManager, "RewardsDistributed")
+                .withArgs(rewardAmount);
 
             const receiverFinalBalance = await baseToken.balanceOf(receiverAddress);
             const receiverGained = receiverFinalBalance - receiverInitialBalance;
@@ -295,28 +295,18 @@ export default async function suite(): Promise<void> {
             /// Set up ///
             const rewardAmount = ethers.parseEther("1000");
 
-            const depositors: SignerWithAddress[] = [
-                user1,
-                user2,
-                user3,
-                user4,
-            ];
+            const depositors: SignerWithAddress[] = [user1, user2, user3, user4];
             const receiverAddress = receiver.address;
             const receiverPercentage: bigint = percentages.RECEIVER_PERCENTAGE;
 
             const receiverInitialBalance = await baseToken.balanceOf(receiverAddress);
             const receiverExpectedAmount = (rewardAmount * receiverPercentage) / maxPercentage;
 
-            const depositedAmounts: bigint[] = [
-                ethers.parseEther("1"),
-                ethers.parseEther("3"),
-                ethers.parseEther("6"),
-                ethers.parseEther("10"),
-            ];
+            const depositedAmounts: bigint[] = [ethers.parseEther("1"), ethers.parseEther("3"), ethers.parseEther("6"), ethers.parseEther("10")];
             const totalDepositedAmount = depositedAmounts.reduce((a, b) => a + b, BigInt(0));
 
             const depositorExpectedAmounts: bigint[] = depositedAmounts.map((amount) => {
-                return (rewardAmount - receiverExpectedAmount) * amount / totalDepositedAmount;
+                return ((rewardAmount - receiverExpectedAmount) * amount) / totalDepositedAmount;
             });
 
             // Prepare depositors
@@ -339,9 +329,9 @@ export default async function suite(): Promise<void> {
             /// Test ///
 
             // Distribute rewards
-            await expect(protocolManager.distributeRewards(await positionManager.getAddress())).to.emit(protocolManager, "RewardsDistributed").withArgs(
-                rewardAmount,
-            );
+            await expect(protocolManager.distributeRewards(await positionManager.getAddress()))
+                .to.emit(protocolManager, "RewardsDistributed")
+                .withArgs(rewardAmount);
 
             const receiverFinalBalance = await baseToken.balanceOf(receiverAddress);
             const receiverGained = receiverFinalBalance - receiverInitialBalance;
@@ -352,7 +342,7 @@ export default async function suite(): Promise<void> {
             depositors.forEach(async (depositor, index) => {
                 const expectedAmount = depositorExpectedAmounts[index];
                 const claimableRewards = await protocolManager.claimableRewards(await positionManager.getAddress(), depositor.address);
-                
+
                 expect(claimableRewards).to.equal(expectedAmount);
             });
         });
@@ -361,9 +351,8 @@ export default async function suite(): Promise<void> {
             const depositor = user1;
 
             await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress()))
-                .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance").withArgs(
-                    depositor.address, await positionManager.getAddress()
-                );
+                .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance")
+                .withArgs(depositor.address, await positionManager.getAddress());
         });
 
         it("Should let depositor collect rewards", async () => {
@@ -395,9 +384,9 @@ export default async function suite(): Promise<void> {
             // Collect rewards
             const depositorInitialBalance = await baseToken.balanceOf(depositor.address);
 
-            await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress())).to.emit(
-                protocolManager, "RewardCollected"
-            ).withArgs(depositor.address, await positionManager.getAddress(), depositorExpectedAmount);
+            await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress()))
+                .to.emit(protocolManager, "RewardCollected")
+                .withArgs(depositor.address, await positionManager.getAddress(), depositorExpectedAmount);
 
             const depositorFinalBalance = await baseToken.balanceOf(depositor.address);
 
@@ -405,9 +394,8 @@ export default async function suite(): Promise<void> {
 
             // Revert if try to re-collect
             await expect(protocolManager.connect(depositor).collectRewards(await positionManager.getAddress()))
-                .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance").withArgs(
-                    depositor.address, await positionManager.getAddress()
-                );
+                .to.be.revertedWithCustomError(protocolManager, "InsufficientBalance")
+                .withArgs(depositor.address, await positionManager.getAddress());
         });
     });
 }
